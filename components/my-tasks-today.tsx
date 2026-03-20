@@ -148,17 +148,17 @@ export function MyTasksToday() {
   
   const displayTasks = sprintFilter === "current-sprint"
     ? tasks.filter(t =>
-        !t.dueDate ||              // Tasks with no due date always shown in current sprint
-        sprintTaskIds.has(t.id) || // Explicitly added to sprint
-        isOverdue(t.dueDate) ||    // Overdue tasks
-        isInCurrentMonth(t.dueDate) // Due this month
+        !t.dueDate ||                // Tasks with no due date always shown in current view
+        sprintTaskIds.has(t.id) ||   // Explicitly added to sprint
+        isOverdue(t.dueDate) ||      // Overdue tasks
+        isInCurrentMonth(t.dueDate)  // Due this month
       )
     : sprintFilter === "backlog"
     ? tasks.filter(t =>
-        t.dueDate &&               // Backlog only shows tasks with a future due date
-        !sprintTaskIds.has(t.id) &&
-        !isOverdue(t.dueDate) &&
-        !isInCurrentMonth(t.dueDate)
+        t.dueDate &&                 // Must have a due date
+        !sprintTaskIds.has(t.id) &&  // Not in sprint
+        !isOverdue(t.dueDate) &&     // Not overdue
+        !isInCurrentMonth(t.dueDate) // Not due this month
       )
     : tasks
 

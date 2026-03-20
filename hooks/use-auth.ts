@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { mutate } from 'swr'
 
 interface User {
   id: string
@@ -94,6 +95,9 @@ export function useAuth() {
 
       console.log('[v0] Login successful, storing token and updating auth state')
       localStorage.setItem('sessionToken', data.sessionToken)
+
+      // Clear all SWR cached data so a previous user's data is never shown for this session
+      await mutate(() => true, undefined, { revalidate: false })
       
       setAuthState({
         user: data.user,
