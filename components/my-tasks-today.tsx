@@ -36,25 +36,41 @@ export interface Task {
   department?: string
 }
 
-const fetcher = (url: string) => {
+const fetcher = async (url: string) => {
   const token = localStorage.getItem("sessionToken")
-  return fetch(url, {
+  const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` },
-  }).then((res) => res.json())
+  })
+  if (res.status === 401 || res.status === 403) {
+    // Session expired — clear token so auth-guard redirects to login
+    localStorage.removeItem("sessionToken")
+    throw new Error("Unauthorized")
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body?.error || "Request failed")
+  }
+  return res.json()
+}
+
+const SWR_OPTS = {
+  // Always fetch fresh data when the component mounts (e.g. user navigates back)
+  revalidateOnMount: true,
+  // Revalidate when the user returns to the browser tab
+  revalidateOnFocus: true,
+  // Allow a new request once every 5 seconds to avoid hammering the API
+  dedupingInterval: 5000,
 }
 
 export function MyTasksToday() {
   const router = useRouter()
-  const { data, error, isLoading, mutate } = useSWR("/api/my-tasks", fetcher, {
-    revalidateOnFocus: false,
-    dedupingInterval: 15000,
-  })
+  const { data, error, isLoading, mutate } = useSWR("/api/my-tasks", fetcher, SWR_OPTS)
 
-  const { data: clientsData } = useSWR("/api/clients", fetcher, { revalidateOnFocus: false })
-  const { data: sprintsData } = useSWR("/api/sprints", fetcher, { revalidateOnFocus: false })
-  const { data: usersData } = useSWR("/api/users", fetcher, { revalidateOnFocus: false })
-  const { data: currentUserProfile } = useSWR("/api/user/profile", fetcher, { revalidateOnFocus: false })
-  const { data: individualSprintData } = useSWR("/api/individual-sprints", fetcher, { revalidateOnFocus: false })
+  const { data: clientsData } = useSWR("/api/clients", fetcher, SWR_OPTS)
+  const { data: sprintsData } = useSWR("/api/sprints", fetcher, SWR_OPTS)
+  const { data: usersData } = useSWR("/api/users", fetcher, SWR_OPTS)
+  const { data: currentUserProfile } = useSWR("/api/user/profile", fetcher, SWR_OPTS)
+  const { data: individualSprintData } = useSWR("/api/individual-sprints", fetcher, SWR_OPTS)
 
   const tasks: Task[] = (data?.tasks || []).map((task: Task) => ({
     ...task,
@@ -131,16 +147,18 @@ export function MyTasksToday() {
   }
   
   const displayTasks = sprintFilter === "current-sprint"
-    ? tasks.filter(t => 
+    ? tasks.filter(t =>
+        !t.dueDate ||              // Tasks with no due date always shown in current sprint
         sprintTaskIds.has(t.id) || // Explicitly added to sprint
-        isOverdue(t.dueDate) ||      // Overdue tasks
-        isInCurrentMonth(t.dueDate)  // Due this month
+        isOverdue(t.dueDate) ||    // Overdue tasks
+        isInCurrentMonth(t.dueDate) // Due this month
       )
     : sprintFilter === "backlog"
-    ? tasks.filter(t => 
-        !sprintTaskIds.has(t.id) &&  // Not in sprint
-        !isOverdue(t.dueDate) &&     // Not overdue
-        !isInCurrentMonth(t.dueDate) // Not due this month
+    ? tasks.filter(t =>
+        t.dueDate &&               // Backlog only shows tasks with a future due date
+        !sprintTaskIds.has(t.id) &&
+        !isOverdue(t.dueDate) &&
+        !isInCurrentMonth(t.dueDate)
       )
     : tasks
 

@@ -60,8 +60,8 @@ export async function GET(request: NextRequest) {
         }
       }
 
-      // Fetch tasks - filter by assigned user for "My Tasks"
-      const tasksResult = await supabase
+      // Fetch tasks — admins/managers see ALL tasks, regular users see only their assigned tasks
+      let tasksQuery = supabase
         .from("tasks")
         .select(`
           id,
@@ -80,8 +80,13 @@ export async function GET(request: NextRequest) {
           phase,
           sprint_id
         `)
-        .eq("assigned_to", userId)
         .order("due_date", { ascending: true })
+
+      if (!isAdmin) {
+        tasksQuery = tasksQuery.eq("assigned_to", userId)
+      }
+
+      const tasksResult = await tasksQuery
 
       // Fetch other data in parallel
       const [powerMovesResult, workflowStepsResult, meetingActionItemsResult] = await Promise.all([
