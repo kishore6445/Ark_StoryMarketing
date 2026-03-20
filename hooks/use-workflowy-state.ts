@@ -37,9 +37,9 @@ export function useWorkflowyState(initialPage: KBPage) {
   }
 
   // Add a new node
-  const addNode = (parentId: string | null, text: string = '', index?: number) => {
+  const addNode = (parentId: string | null, text: string = '', index?: number, id?: string) => {
     const newNode: KBNode = {
-      id: `node-${Date.now()}`,
+      id: id ?? `node-${Date.now()}`,
       text,
       children: [],
       completed: false,

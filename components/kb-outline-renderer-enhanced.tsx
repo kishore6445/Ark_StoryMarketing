@@ -1,17 +1,19 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
-import { ChevronRight, ChevronDown, Trash2, Copy, Tag, Calendar, CheckCircle } from 'lucide-react'
+import { ChevronRight, ChevronDown, Trash2, Copy, Tag, Calendar, CheckCircle, Plus } from 'lucide-react'
 import { KBNode } from '@/lib/kb-types'
 
 interface OutlineRendererProps {
   nodes: KBNode[]
   selectedId: string | null
+  autoEditNodeId?: string | null
+  onAutoEditHandled?: () => void
   onSelectNode: (id: string) => void
   onEditNode: (id: string, text: string) => void
   onDeleteNode: (id: string) => void
   onToggleComplete: (id: string) => void
-  onAddNode: (parentId: string | null) => void
+  onAddNode: (parentId: string | null, text?: string) => void
   onIndent: (id: string) => void
   onOutdent: (id: string) => void
   onZoom?: (id: string) => void
@@ -27,6 +29,8 @@ interface OutlineRendererProps {
 export function OutlineRendererEnhanced({
   nodes,
   selectedId,
+  autoEditNodeId,
+  onAutoEditHandled,
   onSelectNode,
   onEditNode,
   onDeleteNode,
@@ -62,6 +66,27 @@ export function OutlineRendererEnhanced({
       tagInputRef.current.focus()
     }
   }, [addingTagId])
+
+  useEffect(() => {
+    if (!autoEditNodeId) return
+
+    const findNodeById = (nodeList: KBNode[]): KBNode | null => {
+      for (const node of nodeList) {
+        if (node.id === autoEditNodeId) return node
+        const childMatch = findNodeById(node.children)
+        if (childMatch) return childMatch
+      }
+
+      return null
+    }
+
+    const nodeToEdit = findNodeById(nodes)
+    if (!nodeToEdit) return
+
+    setEditingId(nodeToEdit.id)
+    setEditText(nodeToEdit.text)
+    onAutoEditHandled?.()
+  }, [autoEditNodeId, nodes, onAutoEditHandled])
 
   const startEditing = (id: string, text: string) => {
     setEditingId(id)
@@ -100,6 +125,12 @@ export function OutlineRendererEnhanced({
     if (!date) return null
     const d = new Date(date)
     return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
+
+  const handleAddNodeWithPrompt = (parentId: string | null) => {
+    const enteredTitle = window.prompt('Enter item title', '')
+    if (enteredTitle === null) return
+    onAddNode(parentId, enteredTitle.trim())
   }
 
   const renderNode = (node: KBNode) => {
@@ -218,6 +249,17 @@ export function OutlineRendererEnhanced({
 
           {/* Action Buttons */}
           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex gap-1 ml-auto flex-shrink-0">
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                handleAddNodeWithPrompt(node.id)
+                if (!expandedIds.has(node.id)) onToggleExpand(node.id)
+              }}
+              className="p-1 hover:bg-green-100 rounded text-gray-400 hover:text-green-600"
+              title="Add child item"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
             {hasChildren && onZoom && (
               <button
                 onClick={(e) => {
@@ -307,7 +349,7 @@ export function OutlineRendererEnhanced({
       {nodes.map(renderNode)}
       <div className="py-1 px-2">
         <button
-          onClick={() => onAddNode(null)}
+          onClick={() => handleAddNodeWithPrompt(null)}
           className="text-gray-400 hover:text-gray-600 text-sm flex items-center gap-1"
         >
           <Copy className="w-4 h-4" />

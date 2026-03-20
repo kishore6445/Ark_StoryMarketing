@@ -8,178 +8,45 @@ import { useKeyboardShortcuts } from "@/hooks/use-keyboard-shortcuts"
 import { OutlineRendererEnhanced } from "@/components/kb-outline-renderer-enhanced"
 import { KBPage, KBNode } from "@/lib/kb-types"
 import { flattenNodes, getNextNode, getPreviousNode, getFirstChild } from "@/lib/kb-navigation"
+import { useAuth } from "@/hooks/use-auth"
 import {
   createKBNode,
   updateKBNode,
   deleteKBNode,
   toggleKBNodeComplete,
-  fetchKBPages,
+  fetchKBTree,
   addKBNodeTag,
   removeKBNodeTag,
 } from "@/app/actions/kb-actions"
 
 // Default data structure
+const KB_STORAGE_KEY = "kb-page-data"
+const KB_CLEAR_FLAG_KEY = "kb-page-data-cleared-v1"
+
 const defaultPage: KBPage = {
   id: "finance",
   title: "Finance",
   createdAt: new Date(),
   updatedAt: new Date(),
-  nodes: [
-    {
-      id: "1",
-      text: "Labels 15k- Send to Souji",
-      completed: false,
-      tags: [],
-      children: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "2",
-      text: "Data Insights 15k",
-      completed: false,
-      tags: [],
-      children: [
-        {
-          id: "2-1",
-          text: "Send 10k to Pujitha",
-          completed: false,
-          tags: [],
-          children: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "2-2",
-          text: "Add another 5k from Vithram and Send to Kavitha",
-          completed: false,
-          tags: [],
-          children: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "3",
-      text: "Vithram",
-      completed: false,
-      tags: [],
-      children: [
-        {
-          id: "3-1",
-          text: "35 K",
-          completed: false,
-          tags: [],
-          children: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "3-2",
-          text: "Send 5k to Kavitha",
-          completed: false,
-          tags: [],
-          children: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "3-3",
-          text: "2K -Milk Bill",
-          completed: false,
-          tags: [],
-          children: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "3-4",
-          text: "5k Banglore Travel",
-          completed: false,
-          tags: [],
-          children: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "3-5",
-          text: "15k for Painting",
-          completed: false,
-          tags: [],
-          children: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-        {
-          id: "3-6",
-          text: "5K Kumar",
-          completed: false,
-          tags: [],
-          children: [],
-          createdAt: new Date(),
-          updatedAt: new Date(),
-        },
-      ],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "4",
-      text: "Salaries for April",
-      completed: false,
-      tags: [],
-      children: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "5",
-      text: "Nagendar -43",
-      completed: false,
-      tags: [],
-      children: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "6",
-      text: "Sudhir -34",
-      completed: false,
-      tags: [],
-      children: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "7",
-      text: "Hema -17",
-      completed: false,
-      tags: [],
-      children: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-    {
-      id: "8",
-      text: "Out of 85 : Fayaz:25, Suresh 35, Pujitha 10: Gaurav :8k Souji:15k",
-      completed: false,
-      tags: [],
-      children: [],
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    },
-  ],
+  nodes: [],
 }
 
 const allPages = [
-  { id: "home", title: "Home", icon: "🏠", children: [] },
   { id: "finance", title: "Finance", icon: "💰", children: [] },
-  { id: "calendar", title: "Calendar", icon: "📅", children: [] },
-  { id: "projects", title: "Projects", icon: "📋", children: [] },
 ]
+
+function getActionErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message
+
+  if (typeof error === "object" && error !== null) {
+    const message = Reflect.get(error, "message")
+    if (typeof message === "string" && message.trim()) {
+      return message
+    }
+  }
+
+  return "Unknown error"
+}
 
 export default function KnowledgeBasePage() {
   const {
@@ -201,12 +68,13 @@ export default function KnowledgeBasePage() {
     setSearchQuery,
   } = useWorkflowyState(defaultPage)
 
+  const { user } = useAuth()
+  const userId = user?.id ?? ""
+
   const [selectedPageId, setSelectedPageId] = useState("finance")
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(
-    new Set(["1", "2", "3"])
-  )
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>("1")
-  const [userId] = useState("00000000-0000-0000-0000-000000000001") // Demo UUID for testing
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null)
+  const [autoEditNodeId, setAutoEditNodeId] = useState<string | null>(null)
   const [isSyncing, setIsSyncing] = useState(false)
   const [syncError, setSyncError] = useState<string | null>(null)
   const undoStackRef = useRef<Array<{ type: string; nodeId: string }>>([])
@@ -216,7 +84,7 @@ export default function KnowledgeBasePage() {
   useEffect(() => {
     if (typeof window === "undefined") return
     try {
-      localStorage.setItem("kb-page-data", JSON.stringify(currentPage))
+      localStorage.setItem(KB_STORAGE_KEY, JSON.stringify(currentPage))
     } catch (e) {
       console.error("[v0] Failed to save KB data to localStorage:", e)
     }
@@ -226,7 +94,19 @@ export default function KnowledgeBasePage() {
   useEffect(() => {
     if (typeof window === "undefined") return
     try {
-      const saved = localStorage.getItem("kb-page-data")
+      const shouldClearStoredData = !localStorage.getItem(KB_CLEAR_FLAG_KEY)
+
+      if (shouldClearStoredData) {
+        localStorage.removeItem(KB_STORAGE_KEY)
+        localStorage.setItem(KB_CLEAR_FLAG_KEY, "true")
+        setCurrentPage(defaultPage)
+        setSelectedNodeId(null)
+        setExpandedIds(new Set())
+        console.log("[v0] Cleared Knowledge Base local data")
+        return
+      }
+
+      const saved = localStorage.getItem(KB_STORAGE_KEY)
       if (saved) {
         const parsed = JSON.parse(saved)
         setCurrentPage(parsed)
@@ -236,6 +116,28 @@ export default function KnowledgeBasePage() {
       console.error("[v0] Failed to restore KB data from localStorage:", e)
     }
   }, [])
+
+  // Load KB data from database when user is authenticated
+  useEffect(() => {
+    if (!userId) return
+    let cancelled = false
+    ;(async () => {
+      try {
+        const result = await fetchKBTree(userId)
+        if (cancelled) return
+        if (result.success && result.nodes.length > 0) {
+          setCurrentPage((prev) => ({ ...prev, nodes: result.nodes as KBNode[] }))
+          console.log("[KB] Loaded", result.nodes.length, "root nodes from database")
+        } else if (!result.success) {
+          console.warn("[KB] Failed to load from DB:", result.error)
+        }
+      } catch (e) {
+        console.warn("[KB] DB load error:", e)
+      }
+    })()
+    return () => { cancelled = true }
+  }, [userId])
+
   const handleDeleteNode = async (nodeId: string) => {
     setIsSyncing(true)
     setSyncError(null)
@@ -248,7 +150,7 @@ export default function KnowledgeBasePage() {
         setSyncError(result.error || "Failed to delete node")
       }
     } catch (error) {
-      setSyncError(error instanceof Error ? error.message : "Unknown error")
+      setSyncError(getActionErrorMessage(error))
     } finally {
       setIsSyncing(false)
     }
@@ -259,18 +161,33 @@ export default function KnowledgeBasePage() {
     setIsSyncing(true)
     setSyncError(null)
     try {
-      const result = await createKBNode(userId, parentId, text || "New Item", 0)
-      if (result.success && result.data) {
-        const newId = addNode(parentId, text)
-        console.log("[v0] Node created in backend:", result.data.id)
+      const result = await createKBNode(userId, parentId, text, 0)
+      if (result.success) {
+        // Use the DB-generated UUID as the local node ID so subsequent
+        // toggle/edit/delete calls send the correct UUID to the database.
+        const dbId = result.data?.id
+        const newId = addNode(parentId, text, undefined, dbId)
+        setSelectedNodeId(newId)
+        setAutoEditNodeId(newId)
+        if (dbId) {
+          console.log("[KB] Node created in backend:", dbId)
+        } else {
+          console.log("[KB] Node created in local-only mode")
+        }
         return newId
-      } else {
-        setSyncError(result.error || "Failed to create node")
-        return addNode(parentId, text) // Fallback to local state
       }
+
+      setSyncError(result.error || "Failed to create node")
+      const fallbackNodeId = addNode(parentId, text)
+      setSelectedNodeId(fallbackNodeId)
+      setAutoEditNodeId(fallbackNodeId)
+      return fallbackNodeId // Fallback to local state
     } catch (error) {
-      setSyncError(error instanceof Error ? error.message : "Unknown error")
-      return addNode(parentId, text)
+      setSyncError(getActionErrorMessage(error))
+      const fallbackNodeId = addNode(parentId, text)
+      setSelectedNodeId(fallbackNodeId)
+      setAutoEditNodeId(fallbackNodeId)
+      return fallbackNodeId
     } finally {
       setIsSyncing(false)
     }
@@ -289,7 +206,7 @@ export default function KnowledgeBasePage() {
         setSyncError(result.error || "Failed to update node")
       }
     } catch (error) {
-      setSyncError(error instanceof Error ? error.message : "Unknown error")
+      setSyncError(getActionErrorMessage(error))
     } finally {
       setIsSyncing(false)
     }
@@ -297,7 +214,14 @@ export default function KnowledgeBasePage() {
 
   // Wrap toggleComplete to sync with backend
   const handleToggleComplete = async (nodeId: string) => {
-    const node = currentPage.nodes.find((n) => n.id === nodeId)
+    const findInTree = (nodes: KBNode[], id: string): KBNode | null => {
+      for (const n of nodes) {
+        if (n.id === id) return n
+        if (n.children?.length) { const f = findInTree(n.children, id); if (f) return f }
+      }
+      return null
+    }
+    const node = findInTree(currentPage.nodes, nodeId)
     const newCompleted = !node?.completed
     
     setIsSyncing(true)
@@ -311,7 +235,7 @@ export default function KnowledgeBasePage() {
         setSyncError(result.error || "Failed to update node")
       }
     } catch (error) {
-      setSyncError(error instanceof Error ? error.message : "Unknown error")
+      setSyncError(getActionErrorMessage(error))
     } finally {
       setIsSyncing(false)
     }
@@ -330,7 +254,7 @@ export default function KnowledgeBasePage() {
         setSyncError(result.error || "Failed to add tag")
       }
     } catch (error) {
-      setSyncError(error instanceof Error ? error.message : "Unknown error")
+      setSyncError(getActionErrorMessage(error))
     } finally {
       setIsSyncing(false)
     }
@@ -626,11 +550,13 @@ export default function KnowledgeBasePage() {
               <OutlineRendererEnhanced
                 nodes={filteredNodes}
                 selectedId={selectedNodeId}
+                autoEditNodeId={autoEditNodeId}
+                onAutoEditHandled={() => setAutoEditNodeId(null)}
                 onSelectNode={setSelectedNodeId}
                 onEditNode={handleEditNode}
                 onDeleteNode={handleDeleteNode}
                 onToggleComplete={handleToggleComplete}
-                onAddNode={() => handleAddNode(null)}
+                onAddNode={handleAddNode}
                 onIndent={indentNode}
                 onOutdent={outdentNode}
                 onZoom={zoomIn}
