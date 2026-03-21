@@ -72,11 +72,11 @@ export default function MeetingsPage() {
 
       {/* Main Content */}
       <div className="flex h-[calc(100vh-120px)]">
-        {/* Left: Meeting List */}
-        <div className="w-96 border-r border-gray-200 overflow-y-auto">
-          {/* Schedule Form - Inline */}
+        {/* Left: Meeting List (30%) */}
+        <div className="w-72 border-r border-gray-200 overflow-y-auto">
+          {/* Schedule Form */}
           {showScheduleForm && (
-            <div className="border-b border-gray-200 p-6 space-y-4 bg-blue-50">
+            <div className="border-b border-gray-200 p-6 space-y-4 bg-gray-50">
               <MeetingsScheduleForm
                 onSuccess={() => {
                   setShowScheduleForm(false)
@@ -89,8 +89,8 @@ export default function MeetingsPage() {
 
           {/* Upcoming Meetings */}
           <div className="px-4 py-6">
-            <div className="space-y-2">
-              <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-2">
+            <div className="space-y-3">
+              <h2 className="text-sm font-semibold text-gray-700">
                 Upcoming ({upcomingMeetings.length})
               </h2>
               <MeetingsList
@@ -106,12 +106,12 @@ export default function MeetingsPage() {
             <div className="px-4 pb-6 border-t border-gray-200 pt-6">
               <button
                 onClick={() => setShowCompleted(!showCompleted)}
-                className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wide px-2 hover:text-gray-700 w-full transition-colors"
+                className="flex items-center gap-2 text-sm font-semibold text-gray-700 hover:text-gray-900 w-full transition-colors"
               >
                 Completed ({completedMeetings.length})
                 <ChevronDown
                   className={cn(
-                    "w-4 h-4 transition-transform",
+                    "w-4 h-4 transition-transform ml-auto",
                     showCompleted && "rotate-180"
                   )}
                 />
@@ -131,43 +131,46 @@ export default function MeetingsPage() {
           {meetings.length === 0 && !showScheduleForm && (
             <div className="px-4 py-12 text-center">
               <Clock className="w-8 h-8 text-gray-300 mx-auto mb-3" />
-              <p className="text-sm text-gray-500">No meetings scheduled yet</p>
+              <p className="text-sm text-gray-500">No meetings yet</p>
             </div>
           )}
         </div>
 
-        {/* Right: Meeting Details + MOM */}
+        {/* Right: Meeting Details Panel (70%) */}
         <div className="flex-1 overflow-y-auto">
           {selectedMeeting ? (
-            <div className="grid grid-cols-2 gap-6 p-8 h-full">
+            <div className="flex gap-8 p-8 h-full">
               {/* Meeting Details */}
-              <MeetingsDetailsPanel meeting={selectedMeeting} onUpdate={mutate} />
+              <div className="flex-1">
+                <MeetingsDetailsPanel meeting={selectedMeeting} onUpdate={mutate} />
+              </div>
 
               {/* MOM Card */}
-              <MeetingsMomCard 
-                meeting={selectedMeeting} 
-                onUpdate={mutate}
-                onCreateActionItems={(summary, decisions) => {
-                  console.log("[v0] Creating action items from MOM:", { summary, decisions })
-                }}
-                onCreateTask={(title, decision) => {
-                  console.log("[v0] Creating task from action:", { title, decision })
-                }}
-                onAddToKnowledgeBase={(data) => {
-                  console.log("[v0] Adding to knowledge base:", data)
-                  // KB integration will be handled in the component
-                }}
-              />
+              <div className="flex-1">
+                <MeetingsMomCard 
+                  meeting={selectedMeeting} 
+                  onUpdate={mutate}
+                  onCreateActionItems={(summary, decisions) => {
+                    console.log("[v0] Creating action items from MOM:", { summary, decisions })
+                  }}
+                  onCreateTask={(title, decision) => {
+                    console.log("[v0] Creating task from action:", { title, decision })
+                  }}
+                  onAddToKnowledgeBase={(data) => {
+                    console.log("[v0] Adding to knowledge base:", data)
+                  }}
+                />
+              </div>
             </div>
           ) : (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
                 <Users className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-1">
+                <h3 className="text-lg font-semibold text-gray-900 mb-1">
                   Select a meeting
                 </h3>
-                <p className="text-sm text-gray-500">
-                  Choose a meeting from the list to view details and minutes
+                <p className="text-sm text-gray-600">
+                  Choose a meeting to view details and minutes
                 </p>
               </div>
             </div>

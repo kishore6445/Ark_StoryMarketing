@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Save, Loader, X, Zap, Copy, CheckCircle2, BookOpen } from "lucide-react"
+import { Save, Loader, Copy, CheckCircle2, BookOpen } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { useToast } from "@/hooks/use-toast"
 
@@ -29,61 +29,18 @@ export function MeetingsMomCard({ meeting, onUpdate, onCreateActionItems, onCrea
   const { toast } = useToast()
   const [isEditing, setIsEditing] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
-  const [copiedIndex, setCopiedIndex] = useState<number | null>(null)
   const [formData, setFormData] = useState({
     summary: meeting.summary || "",
     keyDecisions: meeting.key_decisions || [""],
   })
 
-  const handleCopyToClipboard = (text: string, index?: number) => {
+  const handleCopyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text)
     toast({
       title: "Copied to clipboard",
-      description: "Ready to share on WhatsApp",
+      description: "Ready to share",
       duration: 2000,
     })
-    if (index !== undefined) {
-      setCopiedIndex(index)
-      setTimeout(() => setCopiedIndex(null), 2000)
-    }
-  }
-
-  const handleAddToKnowledgeBase = async () => {
-    if (!meeting.client_id) return
-
-    const kbData = {
-      summary: formData.summary,
-      decisions: formData.keyDecisions.filter((d) => d.trim()),
-      meetingDate: meeting.date,
-      meetingId: meeting.id,
-    }
-
-    try {
-      const token = localStorage.getItem("sessionToken")
-      const response = await fetch(`/api/clients/${meeting.client_id}/knowledge-base`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify(kbData),
-      })
-
-      if (response.ok) {
-        toast({
-          title: "Added to Knowledge Base",
-          description: "Meeting insights have been saved",
-          duration: 2000,
-        })
-      }
-    } catch (error) {
-      console.error("[v0] Error adding to KB:", error)
-      toast({
-        title: "Error",
-        description: "Failed to add to knowledge base",
-        duration: 2000,
-      })
-    }
   }
 
   const handleCopyAllMOM = () => {
@@ -142,55 +99,73 @@ export function MeetingsMomCard({ meeting, onUpdate, onCreateActionItems, onCrea
     }
   }
 
+  const handleAddToKnowledgeBase = async () => {
+    if (!meeting.client_id) return
+
+    const kbData = {
+      summary: formData.summary,
+      decisions: formData.keyDecisions.filter((d) => d.trim()),
+      meetingDate: meeting.date,
+      meetingId: meeting.id,
+    }
+
+    try {
+      const token = localStorage.getItem("sessionToken")
+      const response = await fetch(`/api/clients/${meeting.client_id}/knowledge-base`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify(kbData),
+      })
+
+      if (response.ok) {
+        toast({
+          title: "Added to Knowledge Base",
+          description: "Meeting insights have been saved",
+          duration: 2000,
+        })
+      }
+    } catch (error) {
+      console.error("[v0] Error adding to KB:", error)
+      toast({
+        title: "Error",
+        description: "Failed to add to knowledge base",
+        duration: 2000,
+      })
+    }
+  }
+
   return (
-    <div className="space-y-4 bg-gradient-to-br from-amber-50 via-orange-50 to-yellow-50 rounded-xl border-2 border-amber-300 p-6 shadow-lg">
-      {/* Header with Copy Button */}
-      <div className="flex items-center justify-between mb-4">
-        <div>
-          <h3 className="text-xl font-bold bg-gradient-to-r from-amber-900 to-orange-700 bg-clip-text text-transparent">Minutes of Meeting</h3>
-          <p className="text-xs text-gray-600 mt-0.5 font-medium">
-            {meeting.client_id || "Meeting"}
-          </p>
-        </div>
-        <button
-          onClick={handleCopyAllMOM}
-          title="Copy all to clipboard for WhatsApp"
-          className="p-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-all flex items-center gap-1.5"
-        >
-          <Copy className="w-4 h-4" />
-          <span className="text-xs font-semibold">Copy All</span>
-        </button>
+    <div className="space-y-6 p-8">
+      {/* Header */}
+      <div>
+        <h2 className="text-2xl font-semibold text-gray-900">Minutes of Meeting</h2>
+        <p className="text-sm text-gray-600 mt-1">{meeting.client_id}</p>
       </div>
 
-      {/* Meeting Info - Pre-filled from schedule */}
-      <div className="grid grid-cols-2 gap-3 p-3 bg-white rounded-lg border border-amber-200">
+      {/* Meeting Info - Compact */}
+      <div className="grid grid-cols-3 gap-6 text-sm">
         <div>
-          <p className="text-xs text-gray-500 font-semibold uppercase">Date</p>
-          <p className="text-sm font-medium text-gray-900">{meeting.date}</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Date</p>
+          <p className="font-medium text-gray-900">{meeting.date}</p>
         </div>
         <div>
-          <p className="text-xs text-gray-500 font-semibold uppercase">Time</p>
-          <p className="text-sm font-medium text-gray-900">{meeting.time}</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Time</p>
+          <p className="font-medium text-gray-900">{meeting.time}</p>
         </div>
-        {meeting.attendees && meeting.attendees.length > 0 && (
-          <div className="col-span-2">
-            <p className="text-xs text-gray-500 font-semibold uppercase mb-2">Attendees</p>
-            <div className="flex flex-wrap gap-2">
-              {meeting.attendees.map((attendee) => (
-                <span key={attendee.id} className="inline-block px-2.5 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
-                  {attendee.full_name}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
+        <div>
+          <p className="text-xs text-gray-500 uppercase tracking-wide font-medium mb-1">Attendees</p>
+          <p className="font-medium text-gray-900">{meeting.attendees?.length || 0} people</p>
+        </div>
       </div>
 
       {isEditing ? (
-        <div className="space-y-4">
-          {/* Summary */}
+        <div className="space-y-6 border-t border-gray-200 pt-6">
+          {/* Summary Input */}
           <div>
-            <label className="block text-xs text-amber-900 font-semibold uppercase tracking-wide mb-2">
+            <label className="block text-sm font-medium text-gray-900 mb-3">
               Summary
             </label>
             <textarea
@@ -198,179 +173,123 @@ export function MeetingsMomCard({ meeting, onUpdate, onCreateActionItems, onCrea
               onChange={(e) =>
                 setFormData({ ...formData, summary: e.target.value })
               }
-              placeholder="Add a meeting summary..."
-              className="w-full px-3 py-2 border border-amber-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 focus:border-transparent resize-none"
-              rows={4}
+              placeholder="Add meeting summary..."
+              className="w-full px-4 py-3 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+              rows={5}
             />
           </div>
 
-          {/* Key Actions */}
-          {formData.keyDecisions.some((d) => d.trim()) && (
-            <div>
-              <p className="text-xs text-amber-900 font-semibold uppercase tracking-wide mb-3">
-                Key Actions
-              </p>
-              <div className="space-y-2.5">
-                {formData.keyDecisions.map(
-                  (decision, index) =>
-                    decision.trim() && (
-                      <div
-                        key={index}
-                        className="flex items-start gap-3 p-3 rounded-lg bg-gradient-to-r from-yellow-100 to-orange-100 border border-yellow-200 hover:shadow-md transition-all"
-                      >
-                        <span className="text-orange-600 font-bold text-lg mt-0.5 flex-shrink-0">
-                          ✓
-                        </span>
-                        <p className="text-sm text-gray-800 flex-1 mt-0.5">{decision}</p>
-                        <div className="flex gap-1.5 flex-shrink-0">
-                          <button
-                            onClick={() => handleCopyToClipboard(decision, index)}
-                            title="Copy to clipboard"
-                            className={cn(
-                              "p-1.5 rounded transition-all",
-                              copiedIndex === index
-                                ? "bg-green-200 text-green-700"
-                                : "bg-white text-gray-600 hover:bg-gray-100"
-                            )}
-                          >
-                            {copiedIndex === index ? (
-                              <CheckCircle2 className="w-4 h-4" />
-                            ) : (
-                              <Copy className="w-4 h-4" />
-                            )}
-                          </button>
-                          {onCreateTask && (
-                            <button
-                              onClick={() => onCreateTask(decision, decision)}
-                              title="Create task from this action"
-                              className="p-1.5 rounded bg-blue-100 text-blue-600 hover:bg-blue-200 transition-all"
-                            >
-                              <Zap className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )
-                )}
-              </div>
+          {/* Key Decisions */}
+          <div>
+            <label className="block text-sm font-medium text-gray-900 mb-3">
+              Key Decisions & Actions
+            </label>
+            <div className="space-y-2">
+              {formData.keyDecisions.map((decision, index) => (
+                <div key={index} className="flex gap-2">
+                  <input
+                    type="text"
+                    value={decision}
+                    onChange={(e) => handleUpdateDecision(index, e.target.value)}
+                    placeholder="Add action item..."
+                    className="flex-1 px-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  {formData.keyDecisions.length > 1 && (
+                    <button
+                      onClick={() => handleRemoveDecision(index)}
+                      className="px-3 py-2 text-gray-500 hover:text-red-600 transition-colors"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+              ))}
+              <button
+                onClick={handleAddDecision}
+                className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+              >
+                + Add action
+              </button>
             </div>
-          )}
+          </div>
 
-          {/* Action Buttons */}
-          <div className="flex gap-2 pt-2">
+          {/* Save/Cancel */}
+          <div className="flex gap-3 pt-6 border-t border-gray-200">
             <button
               onClick={handleSave}
               disabled={isSaving}
-              className="flex-1 px-4 py-2.5 bg-gradient-to-r from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600 text-white font-bold text-sm rounded-lg disabled:opacity-50 transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+              className="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {isSaving && <Loader className="w-4 h-4 animate-spin" />}
-              Save MOM
+              Save
             </button>
             <button
               onClick={() => setIsEditing(false)}
-              className="px-4 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold text-sm rounded-lg transition-all"
+              className="flex-1 px-4 py-3 border border-gray-200 text-gray-700 hover:bg-gray-50 font-medium rounded-lg transition-colors"
             >
               Cancel
             </button>
           </div>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="space-y-6 border-t border-gray-200 pt-6">
           {/* Summary Display */}
-          {formData.summary ? (
-            <div>
-              <p className="text-xs text-amber-900 font-semibold uppercase tracking-wide mb-2">
-                Summary
-              </p>
-              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+          <div>
+            <h3 className="text-sm font-medium text-gray-900 mb-3">Summary</h3>
+            {formData.summary ? (
+              <p className="text-sm text-gray-700 leading-relaxed whitespace-pre-wrap">
                 {formData.summary}
               </p>
-            </div>
-          ) : (
-            <div className="text-center py-4">
-              <p className="text-sm text-gray-500">No summary yet</p>
-            </div>
-          )}
+            ) : (
+              <p className="text-sm text-gray-500">No summary added yet</p>
+            )}
+          </div>
 
-          {/* Key Decisions */}
+          {/* Key Decisions Display */}
           {formData.keyDecisions.some((d) => d.trim()) && (
             <div>
-              <p className="text-xs text-amber-900 font-semibold uppercase tracking-wide mb-3">
-                Key Decisions & Action Items
-              </p>
-              <div className="space-y-2.5">
+              <h3 className="text-sm font-medium text-gray-900 mb-3">Key Actions</h3>
+              <ul className="space-y-2">
                 {formData.keyDecisions.map(
                   (decision, index) =>
                     decision.trim() && (
-                      <div
-                        key={index}
-                        className="flex items-start gap-3 p-3 rounded-lg bg-gradient-to-r from-yellow-100 to-orange-100 border border-yellow-200 hover:shadow-md transition-all"
-                      >
-                        <span className="text-orange-600 font-bold text-lg mt-0.5 flex-shrink-0">
-                          ✓
-                        </span>
-                        <p className="text-sm text-gray-800 flex-1 mt-0.5">{decision}</p>
-                        <div className="flex gap-1.5 flex-shrink-0">
-                          <button
-                            onClick={() => handleCopyToClipboard(decision, index)}
-                            title="Copy to clipboard"
-                            className={cn(
-                              "p-1.5 rounded transition-all",
-                              copiedIndex === index
-                                ? "bg-green-200 text-green-700"
-                                : "bg-white text-gray-600 hover:bg-gray-100"
-                            )}
-                          >
-                            {copiedIndex === index ? (
-                              <CheckCircle2 className="w-4 h-4" />
-                            ) : (
-                              <Copy className="w-4 h-4" />
-                            )}
-                          </button>
-                          {onCreateTask && (
-                            <button
-                              onClick={() => onCreateTask(decision, decision)}
-                              title="Create task from this decision"
-                              className="p-1.5 rounded bg-white text-blue-600 hover:bg-blue-50 transition-all"
-                            >
-                              <Zap className="w-4 h-4" />
-                            </button>
-                          )}
-                        </div>
-                      </div>
+                      <li key={index} className="flex gap-2 text-sm text-gray-700">
+                        <span className="text-blue-600 font-semibold flex-shrink-0">•</span>
+                        <span>{decision}</span>
+                      </li>
                     )
                 )}
-              </div>
+              </ul>
             </div>
           )}
 
-          {/* Action Buttons */}
-          <div className="flex gap-2 pt-4 border-t border-amber-300 flex-wrap">
+          {/* Action Buttons - Only 2 main buttons */}
+          <div className="flex gap-3 pt-6 border-t border-gray-200">
             <button
-              onClick={() => setIsEditing(true)}
-              className="flex-1 min-w-max px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white rounded-lg text-sm font-bold transition-all shadow-md hover:shadow-lg"
+              onClick={handleCopyAllMOM}
+              className="flex-1 flex items-center justify-center gap-2 px-4 py-3 border border-gray-200 text-gray-900 hover:bg-gray-50 font-medium rounded-lg transition-colors"
             >
-              ✎ Edit
+              <Copy className="w-4 h-4" />
+              Copy
             </button>
             {onAddToKnowledgeBase && (
               <button
                 onClick={handleAddToKnowledgeBase}
-                className="flex-1 min-w-max flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white rounded-lg text-sm font-bold transition-all shadow-md hover:shadow-lg"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
               >
                 <BookOpen className="w-4 h-4" />
-                Add to KB
-              </button>
-            )}
-            {onCreateActionItems && formData.summary && (
-              <button
-                onClick={() => onCreateActionItems(formData.summary, formData.keyDecisions.filter((d) => d.trim()))}
-                className="flex-1 min-w-max flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 text-white rounded-lg text-sm font-bold transition-all shadow-md hover:shadow-lg"
-              >
-                <Zap className="w-4 h-4" />
-                Create Actions
+                Knowledge Base
               </button>
             )}
           </div>
+
+          {/* Edit Button */}
+          <button
+            onClick={() => setIsEditing(true)}
+            className="w-full px-4 py-2 text-sm text-blue-600 hover:text-blue-700 font-medium"
+          >
+            ✎ Edit
+          </button>
         </div>
       )}
     </div>
