@@ -15,6 +15,7 @@ interface ClientTask {
   promisedTime?: string
   dueDate?: string
   createdAt?: string
+  sprintId?: string
 }
 
 interface ClientStats {
@@ -41,6 +42,7 @@ export function ClientAnalytics() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClient, setSelectedClient] = useState<string | null>(null)
+  const [selectedSprint, setSelectedSprint] = useState<string | null>(null)
 
   const tasks: ClientTask[] = (data?.tasks || [])
     .filter((task: any) => task.promisedDate)
@@ -54,6 +56,7 @@ export function ClientAnalytics() {
       promisedTime: task.promisedTime || task.promised_time,
       dueDate: task.dueDate || task.due_date,
       createdAt: task.createdAt || task.created_at,
+      sprintId: task.sprint_id || task.sprintId,
     }))
 
   const groupedByClient = tasks.reduce(
@@ -86,13 +89,20 @@ export function ClientAnalytics() {
 
   const filteredGroups = Object.entries(groupedByClient)
     .filter(([clientName]) => !selectedClient || clientName === selectedClient)
-    .filter(([_, clientTasks]) =>
-      clientTasks.some(
-        (task) =>
-          task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          task.taskId.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    )
+    .map(([clientName, allTasks]) => {
+      const sprintFilteredTasks = selectedSprint
+        ? allTasks.filter((task) => task.sprintId === selectedSprint)
+        : allTasks
+      return [
+        clientName,
+        sprintFilteredTasks.filter(
+          (task) =>
+            task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            task.taskId.toLowerCase().includes(searchTerm.toLowerCase())
+        ),
+      ] as [string, ClientTask[]]
+    })
+    .filter(([_, clientTasks]) => clientTasks.length > 0)
 
   const handleCopy = (clientName: string, clientTasks: ClientTask[]) => {
     const stats = getClientStats(clientTasks)
@@ -176,7 +186,50 @@ ${taskList}`
           </div>
         </div>
         
-        <input
+        {/* Sprint Filter Pills */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Filter by Sprint</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedSprint(null)}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                selectedSprint === null
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              )}
+            >
+              All Sprints
+            </button>
+            {Array.from(
+              new Set(
+                tasks
+                  .filter((t) => t.sprintId)
+                  .map((t) => t.sprintId)
+              )
+            )
+              .sort()
+              .map((sprintId) => {
+                const sprintTasks = tasks.filter((t) => t.sprintId === sprintId)
+                const sprintName = `Sprint ${sprintId?.substring(0, 8).toUpperCase()}`
+                return (
+                  <button
+                    key={sprintId}
+                    onClick={() => setSelectedSprint(sprintId || null)}
+                    className={cn(
+                      "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                      selectedSprint === sprintId
+                        ? "bg-blue-600 text-white shadow-sm"
+                        : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                    )}
+                  >
+                    {sprintName} ({sprintTasks.length})
+                  </button>
+                )
+              })}
+          </div>
+        </div>
+        
           type="text"
           placeholder="Search by task name or ID..."
           value={searchTerm}
