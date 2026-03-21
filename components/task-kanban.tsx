@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import type { Task } from "./my-tasks-today"
 import { cn } from "@/lib/utils"
-import { CheckCircle2, Circle, ChevronDown, Calendar, Copy, Check } from "lucide-react"
+import { CheckCircle2, Circle, ChevronDown, Calendar } from "lucide-react"
 
 interface KanbanColumn {
   id: string
@@ -34,9 +34,8 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
   const [draggedTask, setDraggedTask] = useState<Task | null>(null)
   const [sourceColumn, setSourceColumn] = useState<string | null>(null)
   const [dragOverColumn, setDragOverColumn] = useState<string | null>(null)
-  const [expandedColumns, setExpandedColumns] = useState<Record<string, boolean>>({})
+  const [isAnimating, setIsAnimating] = useState(false)
   const [expandedDoneColumn, setExpandedDoneColumn] = useState(true)
-  const [copiedTaskId, setCopiedTaskId] = useState<string | null>(null)
   const [expandedColumns, setExpandedColumns] = useState<Record<string, boolean>>({})
 
   // Get border color based on due date only
@@ -243,13 +242,7 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
     }, 300)
   }
 
-  const handleCopyTaskId = (taskId: string, e: React.MouseEvent) => {
-    e.stopPropagation()
-    const taskNumber = taskId.slice(0, 6).toUpperCase()
-    navigator.clipboard.writeText(taskNumber)
-    setCopiedTaskId(taskId)
-    setTimeout(() => setCopiedTaskId(null), 2000)
-  }
+  const toggleColumnExpand = (columnId: string) => {
     setExpandedColumns((prev) => ({
       ...prev,
       [columnId]: !prev[columnId],
@@ -326,9 +319,7 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
                               draggable
                               onDragStart={() => handleDragStart(task, column.id)}
                               onClick={() => {
-                                if (task.type !== "task") {
-                                  return
-                                }
+                                if (task.type !== "task") return
                                 router.push(`/tasks/${task.id}`)
                               }}
                               style={{
@@ -349,22 +340,9 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
                                 "flex flex-col gap-2"
                               )}
                             >
-                              {/* Task Number with Copy Button */}
-                              <div className="flex items-center justify-between gap-2">
-                                <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                                  {task.taskId || task.id.slice(0, 6).toUpperCase()}
-                                </div>
-                                <button
-                                  onClick={(e) => handleCopyTaskId(task.id, e)}
-                                  className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-gray-200 rounded flex-shrink-0"
-                                  title="Copy task number"
-                                >
-                                  {copiedTaskId === task.id ? (
-                                    <Check className="w-3.5 h-3.5 text-green-600" />
-                                  ) : (
-                                    <Copy className="w-3.5 h-3.5 text-gray-400" />
-                                  )}
-                                </button>
+                              {/* Task Number - Small, muted, easily copyable */}
+                              <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                {task.taskId || task.id.slice(0, 6).toUpperCase()}
                               </div>
 
                               {/* Task Title - Primary focus */}
@@ -437,17 +415,26 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
             <div className="px-4 py-4 space-y-3">
               {tasks
                 .filter(t => t.status === "done" || t.completed)
-                .sort((a, b) => new Date(b.completedAt || b.updatedAt || 0).getTime() - new Date(a.completedAt || a.updatedAt || 0).getTime())
-                .slice(0, 20)
-                .map(task => (
-                  <div key={task.id} draggable onDragStart={() => handleDragStart(task, "done")} onClick={() => task.type === "task" && router.push(`/tasks/${task.id}`)} className="group p-3 rounded-lg border border-green-100 bg-green-50 hover:border-green-200 hover:shadow-sm transition-all cursor-move active:scale-95">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="text-xs font-medium text-green-700 uppercase tracking-wide">
-                        {task.taskId || task.id.slice(0, 6).toUpperCase()}
-                      </div>
-                      <button onClick={(e) => handleCopyTaskId(task.id, e)} className="opacity-0 group-hover:opacity-100 transition-opacity p-1 hover:bg-green-200 rounded flex-shrink-0" title="Copy task number">
-                        {copiedTaskId === task.id ? <Check className="w-3.5 h-3.5 text-green-700" /> : <Copy className="w-3.5 h-3.5 text-green-600" />}
-                      </button>
+                .sort((a, b) => {
+                  // Sort by completion date (newest first) - optional, remove if not needed
+                  const aDate = new Date(a.completedAt || a.updatedAt || 0).getTime()
+                  const bDate = new Date(b.completedAt || b.updatedAt || 0).getTime()
+                  return bDate - aDate
+                })
+                .slice(0, 20) // Show up to 20 recent completions
+                .map((task) => (
+                  <div
+                    key={task.id}
+                    draggable
+                    onDragStart={() => handleDragStart(task, "done")}
+                    onClick={() => {
+                      if (task.type !== "task") return
+                      router.push(`/tasks/${task.id}`)
+                    }}
+                    className="group p-3 rounded-lg border border-green-100 bg-green-50 hover:border-green-200 hover:shadow-sm transition-all cursor-move active:scale-95"
+                  >
+                    <div className="text-xs font-medium text-green-700 uppercase tracking-wide mb-1">
+                      {task.taskId || task.id.slice(0, 6).toUpperCase()}
                     </div>
                     <h4 className="text-sm font-medium text-gray-800 line-clamp-2 leading-snug group-hover:text-gray-900">
                       {task.title}
