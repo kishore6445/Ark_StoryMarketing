@@ -3,14 +3,8 @@
 import { useState } from "react"
 import { Plus, Download, Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
-import DeliveryHealthHero from "@/components/delivery-health-hero"
-import NeedsAttentionSimple from "@/components/needs-attention-simple"
-import ClientSLASimple from "@/components/client-sla-simple"
-import TeamBottlenecks from "@/components/team-bottlenecks"
-import WeeklyDeliveryTracker from "@/components/weekly-delivery-tracker"
-import SchedulingReadiness from "@/components/scheduling-readiness"
+import { ContentClientPipeline } from "@/components/content-client-pipeline"
 import AddContentModal from "@/components/add-content-modal-cv"
-import ContentRecordsUnified from "@/components/content-records-unified"
 
 // Get current month
 const getCurrentMonth = () => {
@@ -19,36 +13,41 @@ const getCurrentMonth = () => {
 }
 
 const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]
-const WEEKS = ["Week 1", "Week 2", "Week 3", "Week 4"]
 const CLIENTS = ["All Clients", "Telugu Pizza", "Smart Snaxx", "Visa Nagendar", "Story Marketing", "ArkTechies"]
 
-const CONTENT_TABS = [
-  { id: "overview", label: "Overview" },
-  { id: "records", label: "Content Records" },
-  { id: "sla", label: "Client SLA" },
-  { id: "team", label: "Team Workload" },
+// Mock client pipeline data
+const MOCK_CLIENTS = [
+  { id: "1", name: "Telugu Pizza", planned: 12, scheduled: 8, published: 5 },
+  { id: "2", name: "Smart Snaxx", planned: 10, scheduled: 10, published: 9 },
+  { id: "3", name: "Visa Nagendar", planned: 8, scheduled: 5, published: 2 },
+  { id: "4", name: "Story Marketing", planned: 15, scheduled: 14, published: 14 },
+  { id: "5", name: "ArkTechies", planned: 6, scheduled: 6, published: 6 },
 ]
 
 export default function ContentVisibilityPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
-  const [selectedWeek, setSelectedWeek] = useState("All Weeks")
   const [selectedClient, setSelectedClient] = useState("All Clients")
-  const [activeContentTab, setActiveContentTab] = useState("overview")
+  const [isLoading] = useState(false)
+
+  // Filter clients if specific one is selected
+  const displayClients = selectedClient === "All Clients" 
+    ? MOCK_CLIENTS 
+    : MOCK_CLIENTS.filter(c => c.name === selectedClient)
 
   return (
-    <div className="w-full max-w-7xl">
-      {/* Header - Minimal */}
+    <div className="w-full max-w-6xl">
+      {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-4xl font-bold text-gray-900">Content Visibility</h1>
-          <p className="text-sm text-gray-500 mt-2">Are we delivering content on time?</p>
+          <h1 className="text-3xl font-bold text-gray-900">Content Pipeline</h1>
+          <p className="text-sm text-gray-600 mt-2">Track content from planned to published for each client</p>
         </div>
         <div className="flex gap-2">
-          <button className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+          <button className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Upload">
             <Upload className="w-5 h-5" />
           </button>
-          <button className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors">
+          <button className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Download">
             <Download className="w-5 h-5" />
           </button>
           <button 
@@ -61,7 +60,7 @@ export default function ContentVisibilityPage() {
         </div>
       </div>
 
-      {/* Filters - Month, Week, Client */}
+      {/* Filters - Simplified to Month + Client only */}
       <div className="mb-8 flex gap-4">
         <div>
           <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">Month</label>
@@ -74,20 +73,6 @@ export default function ContentVisibilityPage() {
               <option key={month} value={month}>
                 {month.charAt(0).toUpperCase() + month.slice(1)}
               </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">Week</label>
-          <select 
-            value={selectedWeek}
-            onChange={(e) => setSelectedWeek(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 bg-white hover:border-gray-400 transition-colors"
-          >
-            <option value="All Weeks">All Weeks</option>
-            {WEEKS.map((week) => (
-              <option key={week} value={week}>{week}</option>
             ))}
           </select>
         </div>
@@ -106,71 +91,57 @@ export default function ContentVisibilityPage() {
         </div>
       </div>
 
-      {/* Horizontal Tabs for Content Sections */}
-      <div className="flex gap-1 mb-6 border-b border-gray-200 overflow-x-auto">
-        {CONTENT_TABS.map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveContentTab(tab.id)}
-            className={cn(
-              "px-4 py-3 text-sm font-medium border-b-2 transition-colors whitespace-nowrap",
-              activeContentTab === tab.id
-                ? "text-blue-600 border-b-blue-600"
-                : "text-gray-600 border-b-transparent hover:text-gray-900"
-            )}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      {/* Tab Content */}
-      {activeContentTab === "overview" && (
-        <div className="space-y-8">
-          {/* Section 1: Delivery Health Hero */}
-          <DeliveryHealthHero month={selectedMonth} week={selectedWeek} client={selectedClient} />
-
-          {/* Section 2: Weekly Delivery Tracker */}
-          <WeeklyDeliveryTracker month={selectedMonth} client={selectedClient} />
-
-          {/* Section 3: Scheduling Readiness */}
-          <SchedulingReadiness month={selectedMonth} />
-
-          {/* Section 4: Needs Attention */}
-          <NeedsAttentionSimple month={selectedMonth} week={selectedWeek} client={selectedClient} />
-        </div>
-      )}
-
-      {activeContentTab === "records" && (
+      {/* Main Content: Client Pipeline */}
+      <div className="space-y-8">
+        {/* Pipeline Overview */}
         <div>
-          <ContentRecordsUnified 
-            month={selectedMonth}
-            week={selectedWeek}
-            client={selectedClient}
+          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
+            {selectedClient === "All Clients" ? "All Clients" : selectedClient} - {selectedMonth.charAt(0).toUpperCase() + selectedMonth.slice(1)}
+          </h2>
+          <ContentClientPipeline 
+            clients={displayClients} 
+            loading={isLoading}
           />
         </div>
-      )}
 
-      {activeContentTab === "sla" && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Client SLA Performance</h2>
-          <ClientSLASimple month={selectedMonth} />
+        {/* Key Insights - Summary stats */}
+        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+          <h3 className="font-semibold text-gray-900 mb-4">Overview</h3>
+          <div className="grid grid-cols-4 gap-6">
+            <div>
+              <p className="text-xs text-gray-600 font-medium mb-1">Total Planned</p>
+              <p className="text-2xl font-bold text-gray-900">
+                {displayClients.reduce((sum, c) => sum + c.planned, 0)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-600 font-medium mb-1">Scheduled</p>
+              <p className="text-2xl font-bold text-blue-600">
+                {displayClients.reduce((sum, c) => sum + c.scheduled, 0)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-600 font-medium mb-1">Published</p>
+              <p className="text-2xl font-bold text-green-600">
+                {displayClients.reduce((sum, c) => sum + c.published, 0)}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-600 font-medium mb-1">Gap</p>
+              <p className="text-2xl font-bold text-red-600">
+                {displayClients.reduce((sum, c) => sum + (c.planned - c.published), 0)}
+              </p>
+            </div>
+          </div>
         </div>
-      )}
-
-      {activeContentTab === "team" && (
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Team Workload Status</h2>
-          <TeamBottlenecks />
-        </div>
-      )}
+      </div>
 
       {/* Add Content Modal */}
       {showAddModal && (
         <AddContentModal 
           onClose={() => setShowAddModal(false)}
           onSubmit={(data) => {
-            console.log("Add content:", data)
+            console.log("[v0] Add content:", data)
             setShowAddModal(false)
           }}
         />
