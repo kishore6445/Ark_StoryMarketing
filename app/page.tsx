@@ -35,7 +35,7 @@ import { ManageCampaigns } from "@/components/manage-campaigns"
 import { RecordCampaignMetrics } from "@/components/record-campaign-metrics"
 import { DashboardHome } from "@/components/dashboard-home"
 import { ClientDetailView } from "@/components/client-detail-view"
-import { ContentCalendarEnhanced } from "@/components/content-calendar-enhanced"
+import { ContentCalendarView } from "@/components/content-calendar-view"
 import { ComplianceBrandSafety } from "@/components/compliance-brand-safety"
 import { TemplateLibrary } from "@/components/template-library"
 import { TeamMeetingScheduler } from "@/components/team-meeting-scheduler"
@@ -227,7 +227,7 @@ export default function DashboardPage() {
               {currentPhase === "workflow" && <WorkflowDashboard clientId={selectedClientId} />}
               {currentPhase === "workflow-manager" && <WorkflowManager />}
               {currentPhase === "content-calendar" && (
-                <ContentCalendarEnhanced 
+                <ContentCalendarView 
                   clientId={selectedClientId} 
                   onCreatePost={() => setShowPostComposer(true)}
                 />
