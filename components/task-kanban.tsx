@@ -195,7 +195,7 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
         "done": <CheckCircle2 className="w-4 h-4" />,
       }[status] || <Circle className="w-4 h-4" />,
     }
-  })
+  }).filter(col => col.id !== "done") // Remove done from main columns (shown in right panel)
 
   const handleDragStart = (task: Task, columnId: string) => {
     setDraggedTask(task)
