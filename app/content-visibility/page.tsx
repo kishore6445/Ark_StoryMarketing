@@ -4,6 +4,8 @@ import { useState } from "react"
 import { Plus, Download, Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ContentClientPipeline } from "@/components/content-client-pipeline"
+import { ContentCalendarView } from "@/components/content-calendar-view"
+import { ContentTrackerTable } from "@/components/content-tracker-table"
 import AddContentModal from "@/components/add-content-modal-cv"
 
 // Get current month
@@ -24,10 +26,51 @@ const MOCK_CLIENTS = [
   { id: "5", name: "ArkTechies", planned: 6, scheduled: 6, published: 6 },
 ]
 
+// Mock content tracker data
+const MOCK_CONTENT = [
+  {
+    id: "1",
+    client: "Telugu Pizza",
+    title: "Top 5 Pizza Hacks",
+    type: "Blog",
+    status: "In Review",
+    daysOverdue: 1,
+    workflow: { writer: "Done", editor: "In Progress", designer: "Pending" },
+    blocker: "Editor"
+  },
+  {
+    id: "2",
+    client: "Smart Snaxx",
+    title: "Unboxing New Product",
+    type: "Reel",
+    status: "In Progress",
+    daysOverdue: 0,
+    workflow: { writer: "Done", editor: "In Progress", designer: "Not Started" },
+    blocker: null
+  },
+  {
+    id: "3",
+    client: "Visa Nagendar",
+    title: "Q2 Roadmap",
+    type: "Blog",
+    status: "Draft",
+    daysOverdue: 0,
+    workflow: { writer: "Not Started", editor: "Not Started", designer: "Not Started" },
+    blocker: "Writer"
+  },
+]
+
+const TABS = [
+  { id: "pipeline", label: "Pipeline Overview" },
+  { id: "calendar", label: "Content Calendar" },
+  { id: "tracker", label: "Content Tracker" },
+]
+
 export default function ContentVisibilityPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
   const [selectedClient, setSelectedClient] = useState("All Clients")
+  const [activeTab, setActiveTab] = useState("pipeline")
   const [isLoading] = useState(false)
 
   // Filter clients if specific one is selected
@@ -36,12 +79,12 @@ export default function ContentVisibilityPage() {
     : MOCK_CLIENTS.filter(c => c.name === selectedClient)
 
   return (
-    <div className="w-full max-w-6xl">
+    <div className="w-full max-w-7xl">
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Content Pipeline</h1>
-          <p className="text-sm text-gray-600 mt-2">Track content from planned to published for each client</p>
+          <h1 className="text-3xl font-bold text-gray-900">Content Management</h1>
+          <p className="text-sm text-gray-600 mt-2">Plan, schedule, and track content across all clients</p>
         </div>
         <div className="flex gap-2">
           <button className="p-2.5 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors" title="Upload">
@@ -60,8 +103,8 @@ export default function ContentVisibilityPage() {
         </div>
       </div>
 
-      {/* Filters - Simplified to Month + Client only */}
-      <div className="mb-8 flex gap-4">
+      {/* Filters */}
+      <div className="mb-6 flex gap-4">
         <div>
           <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">Month</label>
           <select 
@@ -91,50 +134,168 @@ export default function ContentVisibilityPage() {
         </div>
       </div>
 
-      {/* Main Content: Overview First, Then Client Pipeline */}
-      <div className="space-y-8">
-        {/* Key Insights - Summary stats at the top */}
-        <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
-          <h3 className="font-semibold text-gray-900 mb-4">Overview</h3>
-          <div className="grid grid-cols-4 gap-6">
-            <div>
-              <p className="text-xs text-gray-600 font-medium mb-1">Total Planned</p>
-              <p className="text-2xl font-bold text-gray-900">
-                {displayClients.reduce((sum, c) => sum + c.planned, 0)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-600 font-medium mb-1">Scheduled</p>
-              <p className="text-2xl font-bold text-blue-600">
-                {displayClients.reduce((sum, c) => sum + c.scheduled, 0)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-600 font-medium mb-1">Published</p>
-              <p className="text-2xl font-bold text-green-600">
-                {displayClients.reduce((sum, c) => sum + c.published, 0)}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-600 font-medium mb-1">Gap</p>
-              <p className="text-2xl font-bold text-red-600">
-                {displayClients.reduce((sum, c) => sum + (c.planned - c.published), 0)}
-              </p>
+      {/* Tab Navigation */}
+      <div className="flex gap-1 mb-8 border-b border-gray-200">
+        {TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              "px-4 py-3 text-sm font-medium border-b-2 transition-colors",
+              activeTab === tab.id
+                ? "text-blue-600 border-b-blue-600"
+                : "text-gray-600 border-b-transparent hover:text-gray-900"
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      {activeTab === "pipeline" && (
+        <div className="space-y-8">
+          {/* Overview Stats */}
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
+            <h3 className="font-semibold text-gray-900 mb-4">Overview</h3>
+            <div className="grid grid-cols-4 gap-6">
+              <div>
+                <p className="text-xs text-gray-600 font-medium mb-1">Total Planned</p>
+                <p className="text-2xl font-bold text-gray-900">
+                  {displayClients.reduce((sum, c) => sum + c.planned, 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-600 font-medium mb-1">Scheduled</p>
+                <p className="text-2xl font-bold text-blue-600">
+                  {displayClients.reduce((sum, c) => sum + c.scheduled, 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-600 font-medium mb-1">Published</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {displayClients.reduce((sum, c) => sum + c.published, 0)}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-600 font-medium mb-1">Gap</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {displayClients.reduce((sum, c) => sum + (c.planned - c.published), 0)}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Pipeline Overview */}
-        <div>
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
-            {selectedClient === "All Clients" ? "All Clients" : selectedClient} - {selectedMonth.charAt(0).toUpperCase() + selectedMonth.slice(1)}
-          </h2>
-          <ContentClientPipeline 
-            clients={displayClients} 
-            loading={isLoading}
-          />
+          {/* Client Pipeline */}
+          <div>
+            <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
+              {selectedClient === "All Clients" ? "All Clients" : selectedClient} - {selectedMonth.charAt(0).toUpperCase() + selectedMonth.slice(1)}
+            </h2>
+            <ContentClientPipeline 
+              clients={displayClients} 
+              loading={isLoading}
+            />
+          </div>
         </div>
-      </div>
+      )}
+
+      {activeTab === "calendar" && (
+        <ContentCalendarView 
+          clientId={selectedClient === "All Clients" ? null : selectedClient}
+          onCreatePost={() => setShowAddModal(true)}
+        />
+      )}
+
+      {activeTab === "tracker" && (
+        <div className="space-y-6">
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            {MOCK_CONTENT.length === 0 ? (
+              <div className="p-12 text-center">
+                <p className="text-gray-500">No content in progress</p>
+              </div>
+            ) : (
+              <div className="divide-y divide-gray-200">
+                {MOCK_CONTENT.map((item) => (
+                  <div key={item.id} className="p-6 hover:bg-gray-50 transition-colors">
+                    {/* Header Row */}
+                    <div className="flex items-start justify-between mb-4">
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{item.title}</h3>
+                        <p className="text-sm text-gray-600 mt-1">{item.client}</p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <span className={cn(
+                          "text-xs font-semibold px-2.5 py-1 rounded-full",
+                          item.status === "In Review" ? "bg-amber-100 text-amber-700" :
+                          item.status === "In Progress" ? "bg-blue-100 text-blue-700" :
+                          "bg-gray-100 text-gray-700"
+                        )}>
+                          {item.status}
+                        </span>
+                        {item.daysOverdue > 0 && (
+                          <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-700">
+                            {item.daysOverdue}d overdue
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Workflow Row */}
+                    <div className="flex items-center gap-6 text-sm">
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium mb-1">Writer</p>
+                        <p className={cn(
+                          "font-medium",
+                          item.workflow.writer === "Done" ? "text-green-600" : "text-gray-600"
+                        )}>
+                          {item.workflow.writer}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium mb-1">Editor</p>
+                        <p className={cn(
+                          "font-medium",
+                          item.workflow.editor === "Done" ? "text-green-600" : 
+                          item.workflow.editor === "In Progress" ? "text-blue-600" :
+                          "text-gray-600"
+                        )}>
+                          {item.workflow.editor}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 font-medium mb-1">Designer</p>
+                        <p className={cn(
+                          "font-medium",
+                          item.workflow.designer === "Done" ? "text-green-600" : "text-gray-600"
+                        )}>
+                          {item.workflow.designer}
+                        </p>
+                      </div>
+                      {item.blocker && (
+                        <div className="ml-auto">
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-red-100 text-red-700">
+                            BLOCKER: {item.blocker}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div className="mt-4 flex gap-2">
+                      <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                        View Details
+                      </button>
+                      <button className="text-sm text-gray-600 hover:text-gray-700 font-medium">
+                        Add Note
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Add Content Modal */}
       {showAddModal && (
@@ -149,3 +310,4 @@ export default function ContentVisibilityPage() {
     </div>
   )
 }
+
