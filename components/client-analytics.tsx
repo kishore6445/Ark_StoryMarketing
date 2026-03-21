@@ -317,14 +317,6 @@ export function ClientAnalytics() {
     </div>
   )
 }
-
-  // Close dropdowns when component unmounts
-  useEffect(() => {
-    return () => {
-      setShowClientFilter(false)
-      setShowStatusFilter(false)
-      setShowDateFilter(false)
-    }
   }, [])
 
   // Close dropdowns when clicking outside
