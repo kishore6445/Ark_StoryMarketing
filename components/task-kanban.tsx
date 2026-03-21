@@ -4,7 +4,7 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import type { Task } from "./my-tasks-today"
 import { cn } from "@/lib/utils"
-import { CheckCircle2, Circle, ChevronDown } from "lucide-react"
+import { CheckCircle2, Circle, ChevronDown, Calendar } from "lucide-react"
 
 interface KanbanColumn {
   id: string
@@ -150,16 +150,17 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
     }
   }
 
-  // Map task statuses to kanban columns
+  // Simplified 3-state system: Waiting → Working → Done
   const statusMap: Record<string, string> = {
-    "todo": "TO DO",
-    "pending": "TO DO",
-    "in_progress": "IN PROGRESS",
-    "in_review": "IN REVIEW",
-    "done": "DONE",
+    "todo": "Waiting",
+    "pending": "Waiting",
+    "in_progress": "Working",
+    "in_review": "Working",
+    "done": "Done",
   }
 
-  const columnStatuses = ["todo", "in_progress", "in_review", "done"]
+  // Simplified to 3 columns only
+  const columnStatuses = ["todo", "in_progress", "done"]
 
   // Normalize task status for kanban display
   const getNormalizedStatus = (status: string | undefined): string => {
@@ -177,14 +178,14 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
       color: {
         "todo": "border-gray-200",
         "in_progress": "border-blue-200",
-        "in_review": "border-orange-200",
+        "in_review": "border-blue-200",
         "done": "border-green-200",
       }[status],
       bgColor: "bg-white",
       accentColor: {
         "todo": "text-gray-500",
         "in_progress": "text-blue-500",
-        "in_review": "text-orange-500",
+        "in_review": "text-blue-500",
         "done": "text-green-500",
       }[status],
       icon: {
@@ -257,9 +258,9 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
   }
 
   return (
-    <div className="w-full bg-gray-100 min-h-screen">
+    <div className="w-full bg-white min-h-screen">
       <div className="overflow-x-auto">
-        <div className="flex gap-6 px-6 py-6 w-full" style={{ minWidth: "fit-content" }}>
+        <div className="flex gap-8 px-8 py-8 w-full" style={{ minWidth: "fit-content" }}>
           {columns.map((column) => {
             const isExpanded = expandedColumns[column.id]
             const displayCount = isExpanded ? column.tasks.length : Math.min(CARDS_PER_COLUMN_LIMIT, column.tasks.length)
@@ -279,9 +280,9 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
                 key={column.id}
                 className={cn(
                   "flex flex-col rounded-lg border flex-shrink-0 transition-all duration-200 shadow-sm overflow-hidden",
-                  "w-80", // min-width: 320px equivalent
+                  "w-96", // Wider columns for more breathing room
                   dragOverColumn === column.id && draggedTask
-                    ? "border-blue-500 bg-blue-50 shadow-md ring-1 ring-blue-200"
+                    ? "border-blue-400 bg-blue-50 shadow-md ring-1 ring-blue-200"
                     : "border-gray-200 bg-white hover:shadow-md hover:border-gray-300",
                   draggedTask && sourceColumn !== column.id && "opacity-100"
                 )}
@@ -289,31 +290,18 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
                 onDragLeave={handleDragLeave}
                 onDrop={() => handleDrop(column.id)}
               >
-                {/* Column Header - Strengthened typography and hierarchy */}
+                {/* Column Header - Clean and Minimal */}
                 <div 
                   className={cn(
-                    "sticky top-0 z-10 px-4 py-3.5 flex items-center justify-between border-b border-gray-100 bg-white",
+                    "sticky top-0 z-10 px-4 py-4 flex items-center justify-between border-b border-gray-100 bg-white",
                     column.id === "done" ? "cursor-pointer hover:bg-gray-50 transition-colors" : ""
                   )}
                   onClick={() => column.id === "done" && setExpandedDoneColumn(!expandedDoneColumn)}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2.5">
-                      {column.id === "done" && (
-                        <CheckCircle2 className={cn("w-4 h-4 text-green-500 flex-shrink-0 transition-opacity", !expandedDoneColumn && "opacity-50")} />
-                      )}
-                      <h3 className="font-semibold text-sm text-gray-800">
-                        {column.title}
-                      </h3>
-                      <span className="text-sm font-medium text-gray-500">
-                        {column.tasks.length}
-                      </span>
-                    </div>
-                    {hasMore && !isExpanded && column.id !== "done" && (
-                      <p className="text-xs text-gray-500 ml-6 mt-1.5">
-                        Showing {displayCount} of {column.tasks.length}
-                      </p>
-                    )}
+                    <h3 className="font-semibold text-sm text-gray-800">
+                      {column.title} ({column.tasks.length})
+                    </h3>
                   </div>
                   {column.id === "done" && (
                     <ChevronDown 
@@ -325,11 +313,11 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
                   )}
                 </div>
 
-                {/* Tasks Container - Scrollable */}
+                {/* Tasks Container - More whitespace */}
                 {column.id === "done" && !expandedDoneColumn ? (
                   <div className="flex-1 px-4 py-3" />
                 ) : (
-                  <div className="flex-1 px-4 py-3 space-y-3 overflow-y-auto max-h-[calc(100vh-240px)]">
+                  <div className="flex-1 px-4 py-4 space-y-4 overflow-y-auto max-h-[calc(100vh-240px)]">
                     {tasksToShow.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 text-center opacity-50">
                         <p className="text-xs text-gray-500 font-medium">
@@ -359,64 +347,44 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
                                 borderLeftColor: isDone && isTaskOverdue ? "#FF3B30" : borderColor,
                               }}
                               className={cn(
-                                "group relative rounded-lg border-l-4 border border-gray-200 cursor-move transition-all duration-150",
-                                "hover:shadow-sm",
+                                "group relative rounded-lg border border-gray-200 p-4 cursor-move transition-all duration-150",
+                                "hover:shadow-md hover:border-gray-300",
                                 "active:scale-95",
                                 draggedTask?.id === task.id
                                   ? "opacity-50 shadow-lg ring-2 ring-blue-200"
                                   : "",
-                                // Done tasks: green background
-                                isDone && !isTaskOverdue ? "bg-green-50 hover:bg-green-50" : "",
-                                // Done tasks that were overdue: green with red indicator
-                                isDone && isTaskOverdue ? "bg-green-50 hover:bg-green-50 border-red-200" : "",
-                                // Active overdue tasks: red background
-                                !isDone && isTaskOverdue ? "bg-red-100 hover:bg-red-100" : "",
-                                // Active tasks due today: orange background
-                                !isDone && isToday && !isTaskOverdue ? "bg-orange-50 hover:bg-orange-50" : "",
-                                // Normal active tasks: white background
-                                !isDone && !isTaskOverdue && !isToday ? "bg-white hover:bg-gray-50" : "",
-                                "flex flex-col overflow-hidden"
+                                // Minimal color coding
+                                isDone ? "bg-white border-green-200" : "",
+                                !isDone && isTaskOverdue ? "bg-red-50 border-red-300" : "",
+                                !isDone && isToday && !isTaskOverdue ? "bg-orange-50 border-orange-200" : "",
+                                !isDone && !isTaskOverdue && !isToday ? "bg-white" : "",
+                                "flex flex-col gap-2"
                               )}
                             >
-                              {/* Task Content - Consistent padding (14-16px) */}
-                              <div className="px-4 py-3.5">
-                                <div className="space-y-1.5">
-                                  {/* Task ID - Small and muted */}
-                                  <div className="text-xs font-medium text-gray-500 uppercase tracking-wide leading-tight">
-                                    {task.taskId || task.id.slice(0, 6).toUpperCase()}
-                                  </div>
-                                  
-                                  {/* Title - Primary focus, strong weight, 2 lines max */}
-                                  <h4 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-snug">
-                                    {task.title}
-                                  </h4>
+                              {/* Task Title Only - Clean and Simple */}
+                              <h4 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-snug">
+                                {task.title}
+                              </h4>
 
-                                  {/* Meta line - Project • Due Date • Urgency Dot */}
-                                  <div className="flex items-center gap-1.5 text-xs text-gray-500 leading-tight">
-                                    {task.clientName && (
-                                      <span className="truncate font-normal">{task.clientName}</span>
-                                    )}
-                                    {dueDate && (
-                                      <>
-                                        {task.clientName && <span className="text-gray-300 flex-shrink-0">•</span>}
-                                        <span 
-                                          style={{ color: urgencyStatus?.color || "#86868B" }}
-                                          className="flex-shrink-0 font-medium"
-                                        >
-                                          {dueDate}
-                                        </span>
-                                      </>
-                                    )}
-                                    {urgencyStatus && (
-                                      <span
-                                        style={{ backgroundColor: urgencyStatus.dotBg }}
-                                        className="w-2 h-2 rounded-full flex-shrink-0"
-                                        title={urgencyStatus.label}
-                                      />
-                                    )}
-                                  </div>
+                              {/* Meta: Due Date Only (no clutter) */}
+                              {dueDate && (
+                                <div className="flex items-center gap-2 text-xs text-gray-600">
+                                  <Calendar className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                                  <span 
+                                    style={{ color: urgencyStatus?.color || "#86868B" }}
+                                    className="font-medium"
+                                  >
+                                    {dueDate}
+                                  </span>
+                                  {urgencyStatus && (
+                                    <span
+                                      style={{ backgroundColor: urgencyStatus.dotBg }}
+                                      className="w-2 h-2 rounded-full flex-shrink-0 ml-auto"
+                                      title={urgencyStatus.label}
+                                    />
+                                  )}
                                 </div>
-                              </div>
+                              )}
                             </div>
                           )
                         })}
