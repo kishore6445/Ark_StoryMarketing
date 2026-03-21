@@ -91,20 +91,9 @@ export default function ContentVisibilityPage() {
         </div>
       </div>
 
-      {/* Main Content: Client Pipeline */}
+      {/* Main Content: Overview First, Then Client Pipeline */}
       <div className="space-y-8">
-        {/* Pipeline Overview */}
-        <div>
-          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
-            {selectedClient === "All Clients" ? "All Clients" : selectedClient} - {selectedMonth.charAt(0).toUpperCase() + selectedMonth.slice(1)}
-          </h2>
-          <ContentClientPipeline 
-            clients={displayClients} 
-            loading={isLoading}
-          />
-        </div>
-
-        {/* Key Insights - Summary stats */}
+        {/* Key Insights - Summary stats at the top */}
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-6">
           <h3 className="font-semibold text-gray-900 mb-4">Overview</h3>
           <div className="grid grid-cols-4 gap-6">
@@ -133,6 +122,17 @@ export default function ContentVisibilityPage() {
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Pipeline Overview */}
+        <div>
+          <h2 className="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-4">
+            {selectedClient === "All Clients" ? "All Clients" : selectedClient} - {selectedMonth.charAt(0).toUpperCase() + selectedMonth.slice(1)}
+          </h2>
+          <ContentClientPipeline 
+            clients={displayClients} 
+            loading={isLoading}
+          />
         </div>
       </div>
 
