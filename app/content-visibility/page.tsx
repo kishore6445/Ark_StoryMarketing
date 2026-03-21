@@ -35,7 +35,7 @@ const MOCK_CONTENT = [
     type: "Blog",
     status: "In Review",
     daysOverdue: 1,
-    workflow: { writer: "Done", editor: "In Progress", designer: "Not Started" },
+    workflow: { writer: "Done", editor: "In Progress", designer: "Pending" },
     blocker: "Editor"
   },
   {
