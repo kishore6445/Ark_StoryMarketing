@@ -76,7 +76,6 @@ export function ClientAnalytics() {
     new Map(tasks.map((task) => [task.clientId, task.clientName])).entries()
   ).map(([id, name]) => ({ id, name }))
 
-  // Group and filter tasks
   const groupedTasks: GroupedTasks = tasks.reduce((acc: GroupedTasks, task: ClientTask) => {
     if (!acc[task.clientId]) {
       acc[task.clientId] = { clientName: task.clientName, tasks: [] }
@@ -124,13 +123,11 @@ export function ClientAnalytics() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold text-gray-900">Client Analytics</h1>
         <p className="text-gray-600">View all client promises. Copy directly to WhatsApp for sharing.</p>
       </div>
 
-      {/* Controls */}
       <div className="space-y-4">
         <div className="flex gap-3 items-center">
           <div className="flex-1 relative">
@@ -175,7 +172,6 @@ export function ClientAnalytics() {
           </button>
         </div>
 
-        {/* Filter Pills */}
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center gap-2">
             {uniqueClients.map((client) => (
@@ -218,7 +214,6 @@ export function ClientAnalytics() {
         </div>
       </div>
 
-      {/* Loading State */}
       {isLoading && (
         <div className="flex items-center justify-center py-16">
           <div className="text-center">
@@ -228,7 +223,6 @@ export function ClientAnalytics() {
         </div>
       )}
 
-      {/* Empty State */}
       {!isLoading && filteredGroups.length === 0 && (
         <div className="border border-dashed border-gray-200 rounded-lg p-12 text-center">
           <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
@@ -239,12 +233,10 @@ export function ClientAnalytics() {
         </div>
       )}
 
-      {/* Client Groups */}
       {!isLoading && filteredGroups.length > 0 && (
         <div className="space-y-3">
           {filteredGroups.map(([clientId, group]) => (
             <div key={clientId} className="border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 transition-colors">
-              {/* Client Header */}
               <div className="px-6 py-4 bg-gray-50 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="w-2.5 h-2.5 bg-blue-600 rounded-full" />
@@ -274,7 +266,6 @@ export function ClientAnalytics() {
                 </button>
               </div>
 
-              {/* Tasks List */}
               <div className="divide-y divide-gray-100">
                 {group.tasks.map((task) => (
                   <div key={task.id} className="px-6 py-3 hover:bg-gray-50 transition-colors">
@@ -295,8 +286,8 @@ export function ClientAnalytics() {
                           )}
                         </div>
                       </div>
-                      <div>
-                        <span className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1 whitespace-nowrap", STATUS_CONFIG[task.status || "todo"].color)}>
+                      <div className="flex items-center gap-2">
+                        <span className={cn("px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1", STATUS_CONFIG[task.status || "todo"].color)}>
                           <span className={cn("w-2 h-2 rounded-full", STATUS_CONFIG[task.status || "todo"].dot)} />
                           {STATUS_CONFIG[task.status || "todo"].label}
                         </span>
