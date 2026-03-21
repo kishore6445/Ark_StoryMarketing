@@ -3,7 +3,6 @@
 import { useState } from "react"
 import { Plus, Download, Upload } from "lucide-react"
 import { cn } from "@/lib/utils"
-import useSWR from "swr"
 import { ContentClientPipeline } from "@/components/content-client-pipeline"
 import { ContentCalendarView } from "@/components/content-calendar-view"
 import { ContentTrackerTable } from "@/components/content-tracker-table"
@@ -18,7 +17,48 @@ const getCurrentMonth = () => {
 const MONTHS = ["january", "february", "march", "april", "may", "june", "july", "august", "september", "october", "november", "december"]
 const CLIENTS = ["All Clients", "Telugu Pizza", "Smart Snaxx", "Visa Nagendar", "Story Marketing", "ArkTechies"]
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
+// Mock client pipeline data
+const MOCK_CLIENTS = [
+  { id: "1", name: "Telugu Pizza", planned: 12, scheduled: 8, published: 5 },
+  { id: "2", name: "Smart Snaxx", planned: 10, scheduled: 10, published: 9 },
+  { id: "3", name: "Visa Nagendar", planned: 8, scheduled: 5, published: 2 },
+  { id: "4", name: "Story Marketing", planned: 15, scheduled: 14, published: 14 },
+  { id: "5", name: "ArkTechies", planned: 6, scheduled: 6, published: 6 },
+]
+
+// Mock content tracker data
+const MOCK_CONTENT = [
+  {
+    id: "1",
+    client: "Telugu Pizza",
+    title: "Top 5 Pizza Hacks",
+    type: "Blog",
+    status: "In Review",
+    daysOverdue: 1,
+    workflow: { writer: "Done", editor: "In Progress", designer: "Pending" },
+    blocker: "Editor"
+  },
+  {
+    id: "2",
+    client: "Smart Snaxx",
+    title: "Unboxing New Product",
+    type: "Reel",
+    status: "In Progress",
+    daysOverdue: 0,
+    workflow: { writer: "Done", editor: "In Progress", designer: "Not Started" },
+    blocker: null
+  },
+  {
+    id: "3",
+    client: "Visa Nagendar",
+    title: "Q2 Roadmap",
+    type: "Blog",
+    status: "Draft",
+    daysOverdue: 0,
+    workflow: { writer: "Not Started", editor: "Not Started", designer: "Not Started" },
+    blocker: "Writer"
+  },
+]
 
 const TABS = [
   { id: "pipeline", label: "Pipeline Overview" },
@@ -31,29 +71,12 @@ export default function ContentVisibilityPage() {
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonth())
   const [selectedClient, setSelectedClient] = useState("All Clients")
   const [activeTab, setActiveTab] = useState("pipeline")
+  const [isLoading] = useState(false)
 
-  // Fetch pipeline data from API
-  const { data: pipelineData, isLoading: pipelineLoading } = useSWR(
-    `/api/content/pipeline?client=${selectedClient}`,
-    fetcher,
-    { revalidateOnFocus: false }
-  )
-
-  // Fetch calendar data from API
-  const { data: calendarData, isLoading: calendarLoading } = useSWR(
-    activeTab === "calendar" ? `/api/content/calendar?clientId=${selectedClient}&month=${selectedMonth}` : null,
-    fetcher,
-    { revalidateOnFocus: false }
-  )
-
-  // Fetch tracker data from API
-  const { data: trackerData, isLoading: trackerLoading } = useSWR(
-    activeTab === "tracker" ? `/api/content/tracker` : null,
-    fetcher,
-    { revalidateOnFocus: false }
-  )
-
-  const displayClients = pipelineData?.clients || []
+  // Filter clients if specific one is selected
+  const displayClients = selectedClient === "All Clients" 
+    ? MOCK_CLIENTS 
+    : MOCK_CLIENTS.filter(c => c.name === selectedClient)
 
   return (
     <div className="w-full max-w-7xl">
@@ -139,25 +162,25 @@ export default function ContentVisibilityPage() {
               <div>
                 <p className="text-xs text-gray-600 font-medium mb-1">Total Planned</p>
                 <p className="text-2xl font-bold text-gray-900">
-                  {displayClients.reduce((sum: number, c: any) => sum + c.planned, 0)}
+                  {displayClients.reduce((sum, c) => sum + c.planned, 0)}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-gray-600 font-medium mb-1">Scheduled</p>
                 <p className="text-2xl font-bold text-blue-600">
-                  {displayClients.reduce((sum: number, c: any) => sum + c.scheduled, 0)}
+                  {displayClients.reduce((sum, c) => sum + c.scheduled, 0)}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-gray-600 font-medium mb-1">Published</p>
                 <p className="text-2xl font-bold text-green-600">
-                  {displayClients.reduce((sum: number, c: any) => sum + c.published, 0)}
+                  {displayClients.reduce((sum, c) => sum + c.published, 0)}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-gray-600 font-medium mb-1">Gap</p>
                 <p className="text-2xl font-bold text-red-600">
-                  {displayClients.reduce((sum: number, c: any) => sum + (c.planned - c.published), 0)}
+                  {displayClients.reduce((sum, c) => sum + (c.planned - c.published), 0)}
                 </p>
               </div>
             </div>
@@ -170,7 +193,7 @@ export default function ContentVisibilityPage() {
             </h2>
             <ContentClientPipeline 
               clients={displayClients} 
-              loading={pipelineLoading}
+              loading={isLoading}
             />
           </div>
         </div>
@@ -187,7 +210,7 @@ export default function ContentVisibilityPage() {
 
       {activeTab === "tracker" && (
         <div key="tracker-tab">
-          <ContentTrackerTable data={trackerData?.items || []} />
+          <ContentTrackerTable data={MOCK_CONTENT} />
         </div>
       )}
 

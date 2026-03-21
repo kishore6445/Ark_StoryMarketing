@@ -1,11 +1,9 @@
 "use client"
 
 import { ChevronRight, LayoutDashboard } from "lucide-react"
-import Link from "next/link"
-import { useBreadcrumbs } from "@/hooks/use-breadcrumbs"
 
 interface BreadcrumbTrailProps {
-  items?: Array<{
+  items: Array<{
     label: string
     onClick?: () => void
     active?: boolean
@@ -13,37 +11,23 @@ interface BreadcrumbTrailProps {
 }
 
 export function BreadcrumbTrail({ items }: BreadcrumbTrailProps) {
-  const autoBreadcrumbs = useBreadcrumbs()
-  const breadcrumbs = items || autoBreadcrumbs
-
   return (
-    <div className="flex items-center gap-2 px-6 py-3 bg-white border-b border-gray-200 text-sm">
-      <LayoutDashboard className="w-4 h-4 text-gray-600" />
-      {breadcrumbs.map((item, index) => (
+    <div className="flex items-center gap-2 px-6 py-3 bg-white border-b border-[#E5E5E7] text-sm">
+      <LayoutDashboard className="w-4 h-4 text-[#86868B]" />
+      {items.map((item, index) => (
         <div key={index} className="flex items-center gap-2">
-          {index > 0 && <ChevronRight className="w-4 h-4 text-gray-300" />}
+          {index > 0 && <ChevronRight className="w-4 h-4 text-[#D1D1D6]" />}
           {item.onClick ? (
             <button
               onClick={item.onClick}
-              className="text-blue-600 hover:text-blue-700 transition-colors"
+              className="text-[#007AFF] hover:text-[#0051C3] transition-colors"
             >
               {item.label}
             </button>
-          ) : "href" in item ? (
-            <Link
-              href={item.href}
-              className={
-                item.active
-                  ? "text-gray-900 font-medium cursor-default"
-                  : "text-blue-600 hover:text-blue-700 transition-colors"
-              }
-            >
-              {item.label}
-            </Link>
           ) : (
             <span
               className={
-                item.active ? "text-gray-900 font-medium" : "text-gray-600"
+                item.active ? "text-[#1D1D1F] font-medium" : "text-[#86868B]"
               }
             >
               {item.label}
