@@ -1,102 +1,131 @@
 "use client"
 
-import { ExternalLink } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+interface ContentItem {
+  id: string
+  client: string
+  title: string
+  type: string
+  status: "In Review" | "In Progress" | "Draft"
+  daysOverdue?: number
+  workflow: {
+    writer: "Done" | "In Progress" | "Not Started"
+    editor: "Done" | "In Progress" | "Not Started"
+    designer: "Done" | "In Progress" | "Not Started"
+  }
+  blocker?: string
+}
 
 interface ContentTrackerTableProps {
-  data: any[]
+  data: ContentItem[]
 }
 
-const statusStyles = {
-  Planned: "bg-gray-100 text-gray-800",
-  Scheduled: "bg-blue-100 text-blue-800",
-  Posted: "bg-green-100 text-green-800",
-  Missed: "bg-red-100 text-red-800",
-  Pending: "bg-yellow-100 text-yellow-800",
-  Paused: "bg-orange-100 text-orange-800",
-}
-
-const statusColors = {
-  Planned: "border-l-4 border-gray-400",
-  Scheduled: "border-l-4 border-blue-400",
-  Posted: "border-l-4 border-green-400",
-  Missed: "border-l-4 border-red-400",
-  Pending: "border-l-4 border-yellow-400",
-  Paused: "border-l-4 border-orange-400",
+const getWorkflowColor = (status: string) => {
+  switch (status) {
+    case "Done":
+      return "text-green-600 font-medium"
+    case "In Progress":
+      return "text-blue-600 font-medium"
+    default:
+      return "text-gray-600"
+  }
 }
 
 export function ContentTrackerTable({ data }: ContentTrackerTableProps) {
   if (data.length === 0) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-12 text-center shadow-sm">
-        <p className="text-gray-600 font-medium">No content found matching your filters</p>
+      <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+        <p className="text-gray-600 font-medium">No content items to track</p>
       </div>
     )
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full">
-          <thead className="bg-slate-50 border-b border-gray-200 sticky top-0">
-            <tr>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Client</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Title</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Platform</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Type</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Planned Date</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Posted Date</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Status</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Owner</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Link</th>
-              <th className="px-6 py-4 text-left text-xs font-semibold text-gray-700 uppercase">Notes</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {data.map((item, index) => (
-              <tr key={item.id} className={`hover:bg-gray-50 transition-colors ${statusColors[item.status]}`}>
-                <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.client}</td>
-                <td className="px-6 py-4 text-sm text-gray-700">{item.title}</td>
-                <td className="px-6 py-4 text-sm text-gray-700">{item.platform}</td>
-                <td className="px-6 py-4 text-sm text-gray-700">{item.contentType}</td>
-                <td className="px-6 py-4 text-sm text-gray-700">{item.plannedDate}</td>
-                <td className="px-6 py-4 text-sm text-gray-700">{item.postedDate || "-"}</td>
-                <td className="px-6 py-4">
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold ${statusStyles[item.status]}`}>
-                    {item.status}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-700">{item.owner}</td>
-                <td className="px-6 py-4 text-sm">
-                  {item.postLink ? (
-                    <a
-                      href={item.postLink}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-1 text-blue-600 hover:text-blue-700 font-medium"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      View
-                    </a>
-                  ) : (
-                    <span className="text-gray-400">-</span>
-                  )}
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-700 max-w-xs truncate" title={item.notes}>
-                  {item.notes}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+    <div className="space-y-4">
+      {data.map((item) => (
+        <div
+          key={item.id}
+          className="bg-white border border-gray-200 rounded-lg p-6 hover:border-gray-300 transition-colors"
+        >
+          {/* Header Row */}
+          <div className="flex items-start justify-between mb-4">
+            <div className="flex-1">
+              <h3 className="text-base font-semibold text-gray-900">{item.title}</h3>
+              <p className="text-sm text-gray-600 mt-1">{item.client} • {item.type}</p>
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Status Badge */}
+              <span
+                className={cn(
+                  "text-xs font-semibold px-3 py-1 rounded-full",
+                  item.status === "In Review"
+                    ? "bg-amber-100 text-amber-700"
+                    : item.status === "In Progress"
+                    ? "bg-blue-100 text-blue-700"
+                    : "bg-gray-100 text-gray-700"
+                )}
+              >
+                {item.status}
+              </span>
 
-      {/* Footer with row count */}
-      <div className="bg-slate-50 border-t border-gray-200 px-6 py-3">
-        <p className="text-sm text-gray-600">
-          Showing <span className="font-semibold">{data.length}</span> of{" "}
-          <span className="font-semibold">{data.length}</span> items
-        </p>
-      </div>
+              {/* Overdue Badge */}
+              {item.daysOverdue && item.daysOverdue > 0 && (
+                <span className="text-xs font-semibold px-3 py-1 rounded-full bg-red-100 text-red-700">
+                  {item.daysOverdue}d overdue
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Workflow Pipeline */}
+          <div className="bg-gray-50 rounded-lg p-4 mb-4">
+            <div className="grid grid-cols-3 gap-8">
+              <div>
+                <p className="text-xs text-gray-600 font-semibold uppercase mb-2">Writer</p>
+                <p className={cn("text-sm", getWorkflowColor(item.workflow.writer))}>
+                  {item.workflow.writer}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-600 font-semibold uppercase mb-2">Editor</p>
+                <p className={cn("text-sm", getWorkflowColor(item.workflow.editor))}>
+                  {item.workflow.editor}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-600 font-semibold uppercase mb-2">Designer</p>
+                <p className={cn("text-sm", getWorkflowColor(item.workflow.designer))}>
+                  {item.workflow.designer}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Blocker Alert */}
+          {item.blocker && (
+            <div className="mb-4 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg p-3">
+              <span className="text-xs font-bold text-red-700">BLOCKER:</span>
+              <span className="text-sm font-semibold text-red-700">{item.blocker} is holding up progress</span>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex gap-3 pt-2">
+            <button className="text-sm text-blue-600 hover:text-blue-700 font-medium transition-colors">
+              View Details
+            </button>
+            <button className="text-sm text-gray-600 hover:text-gray-700 font-medium transition-colors">
+              Add Note
+            </button>
+            {item.blocker && (
+              <button className="text-sm text-red-600 hover:text-red-700 font-medium transition-colors">
+                Resolve Blocker
+              </button>
+            )}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
