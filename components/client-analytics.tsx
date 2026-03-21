@@ -230,6 +230,7 @@ ${taskList}`
           </div>
         </div>
         
+        <input
           type="text"
           placeholder="Search by task name or ID..."
           value={searchTerm}
