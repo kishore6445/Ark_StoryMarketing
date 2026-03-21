@@ -32,6 +32,7 @@ import {
   UserPlus,
   List,
   ChevronDown,
+  Workflow,
 } from "lucide-react"
 
 const primaryNav = [
@@ -39,6 +40,11 @@ const primaryNav = [
     id: "my-tasks",
     name: "My Tasks",
     icon: CheckSquare,
+  },
+  {
+    id: "sprint-management",
+    name: "Sprint Management",
+    icon: Workflow,
   },
   {
     id: "client-analytics",
