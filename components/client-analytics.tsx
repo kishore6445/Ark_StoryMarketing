@@ -339,6 +339,8 @@ export function ClientAnalytics() {
             Due
           </button>
         </div>
+          </button>
+        </div>
 
         {/* Date Range Filter */}
         <div className="relative">
