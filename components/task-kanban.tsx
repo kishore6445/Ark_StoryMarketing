@@ -159,8 +159,8 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
     "done": "Done",
   }
 
-  // Full 4-column workflow
-  const columnStatuses = ["todo", "in_progress", "in_review", "done"]
+  // Active workflow columns (Done shown separately in right panel)
+  const columnStatuses = ["todo", "in_progress", "in_review"]
 
   // Normalize task status for kanban display
   const getNormalizedStatus = (status: string | undefined): string => {
@@ -258,22 +258,16 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
   }
 
   return (
-    <div className="w-full bg-white min-h-screen">
-      <div className="overflow-x-auto">
+    <div className="w-full bg-white min-h-screen flex">
+      {/* Left side: Active work columns (70%) */}
+      <div className="flex-1 overflow-x-auto border-r border-gray-200">
         <div className="flex gap-8 px-8 py-8 w-full" style={{ minWidth: "fit-content" }}>
           {columns.map((column) => {
             const isExpanded = expandedColumns[column.id]
             const displayCount = isExpanded ? column.tasks.length : Math.min(CARDS_PER_COLUMN_LIMIT, column.tasks.length)
             const hasMore = column.tasks.length > CARDS_PER_COLUMN_LIMIT
             const displayTasks = isExpanded ? column.tasks : column.tasks.slice(0, CARDS_PER_COLUMN_LIMIT)
-
-            // For DONE column, show collapsed by default
-            let doneDisplayTasks = displayTasks
-            if (column.id === "done" && !expandedDoneColumn) {
-              doneDisplayTasks = []
-            }
-
-            const tasksToShow = column.id === "done" ? doneDisplayTasks : displayTasks
+            const tasksToShow = displayTasks
 
             return (
               <div
@@ -292,32 +286,17 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
               >
                 {/* Column Header - Clean and Minimal */}
                 <div 
-                  className={cn(
-                    "sticky top-0 z-10 px-4 py-4 flex items-center justify-between border-b border-gray-100 bg-white",
-                    column.id === "done" ? "cursor-pointer hover:bg-gray-50 transition-colors" : ""
-                  )}
-                  onClick={() => column.id === "done" && setExpandedDoneColumn(!expandedDoneColumn)}
+                  className="sticky top-0 z-10 px-4 py-4 flex items-center justify-between border-b border-gray-100 bg-white"
                 >
                   <div className="flex-1 min-w-0">
                     <h3 className="font-semibold text-sm text-gray-800">
                       {column.title} ({column.tasks.length})
                     </h3>
                   </div>
-                  {column.id === "done" && (
-                    <ChevronDown 
-                      className={cn(
-                        "w-4 h-4 text-gray-500 transition-transform duration-200 flex-shrink-0 ml-2",
-                        expandedDoneColumn && "rotate-180"
-                      )}
-                    />
-                  )}
                 </div>
 
                 {/* Tasks Container - More whitespace */}
-                {column.id === "done" && !expandedDoneColumn ? (
-                  <div className="flex-1 px-4 py-3" />
-                ) : (
-                  <div className="flex-1 px-4 py-4 space-y-4 overflow-y-auto max-h-[calc(100vh-240px)]">
+                <div className="flex-1 px-4 py-4 space-y-4 overflow-y-auto max-h-[calc(100vh-240px)]">
                     {tasksToShow.length === 0 ? (
                       <div className="flex flex-col items-center justify-center py-12 text-center opacity-50">
                         <p className="text-xs text-gray-500 font-medium">
@@ -408,10 +387,62 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
                       </>
                     )}
                   </div>
-                )}
               </div>
             )
           })}
+        </div>
+      </div>
+
+      {/* Right side: Done wins panel (30%) - Always visible */}
+      <div className="w-96 bg-white border-l border-gray-200 flex flex-col overflow-hidden">
+        <div className="px-6 py-6 border-b border-gray-100">
+          <h3 className="font-semibold text-sm text-gray-800 flex items-center gap-2">
+            <CheckCircle2 className="w-5 h-5 text-green-500 flex-shrink-0" />
+            Done ({tasks.filter(t => t.status === "done" || t.completed).length})
+          </h3>
+          <p className="text-xs text-gray-500 mt-1">Showing recent wins</p>
+        </div>
+
+        {/* Done tasks scrollable area */}
+        <div className="flex-1 overflow-y-auto">
+          {tasks.filter(t => t.status === "done" || t.completed).length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <CheckCircle2 className="w-10 h-10 text-gray-300 mb-2" />
+              <p className="text-xs text-gray-500 font-medium">No completed tasks yet</p>
+              <p className="text-xs text-gray-400 mt-1">Keep working, you'll get here soon!</p>
+            </div>
+          ) : (
+            <div className="px-4 py-4 space-y-3">
+              {tasks
+                .filter(t => t.status === "done" || t.completed)
+                .sort((a, b) => {
+                  // Sort by completion date (newest first) - optional, remove if not needed
+                  const aDate = new Date(a.completedAt || a.updatedAt || 0).getTime()
+                  const bDate = new Date(b.completedAt || b.updatedAt || 0).getTime()
+                  return bDate - aDate
+                })
+                .slice(0, 20) // Show up to 20 recent completions
+                .map((task) => (
+                  <div
+                    key={task.id}
+                    draggable
+                    onDragStart={() => handleDragStart(task, "done")}
+                    onClick={() => {
+                      if (task.type !== "task") return
+                      router.push(`/tasks/${task.id}`)
+                    }}
+                    className="group p-3 rounded-lg border border-green-100 bg-green-50 hover:border-green-200 hover:shadow-sm transition-all cursor-move active:scale-95"
+                  >
+                    <div className="text-xs font-medium text-green-700 uppercase tracking-wide mb-1">
+                      {task.taskId || task.id.slice(0, 6).toUpperCase()}
+                    </div>
+                    <h4 className="text-sm font-medium text-gray-800 line-clamp-2 leading-snug group-hover:text-gray-900">
+                      {task.title}
+                    </h4>
+                  </div>
+                ))}
+            </div>
+          )}
         </div>
       </div>
     </div>
