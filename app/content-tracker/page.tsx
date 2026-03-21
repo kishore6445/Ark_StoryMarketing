@@ -2,65 +2,21 @@
 
 import { useState } from "react"
 import { Plus, Download, Upload } from "lucide-react"
+import useSWR from "swr"
 import { ContentTrackerTable } from "@/components/content-tracker-table"
 import AddContentModal from "@/components/add-content-modal-cv"
 
-// Mock content tracker data
-const MOCK_CONTENT = [
-  {
-    id: "1",
-    client: "Telugu Pizza",
-    title: "Top 5 Pizza Hacks",
-    type: "Blog",
-    status: "In Review" as const,
-    daysOverdue: 1,
-    workflow: { writer: "Done" as const, editor: "In Progress" as const, designer: "Pending" as const },
-    blocker: "Editor"
-  },
-  {
-    id: "2",
-    client: "Smart Snaxx",
-    title: "Unboxing New Product",
-    type: "Reel",
-    status: "In Progress" as const,
-    daysOverdue: 0,
-    workflow: { writer: "Done" as const, editor: "In Progress" as const, designer: "Not Started" as const },
-    blocker: undefined
-  },
-  {
-    id: "3",
-    client: "Visa Nagendar",
-    title: "Q2 Roadmap",
-    type: "Blog",
-    status: "Draft" as const,
-    daysOverdue: 0,
-    workflow: { writer: "Not Started" as const, editor: "Not Started" as const, designer: "Not Started" as const },
-    blocker: "Writer"
-  },
-  {
-    id: "4",
-    client: "Story Marketing",
-    title: "Brand Guidelines Update",
-    type: "Document",
-    status: "In Progress" as const,
-    daysOverdue: 0,
-    workflow: { writer: "Done" as const, editor: "Done" as const, designer: "In Progress" as const },
-    blocker: undefined
-  },
-  {
-    id: "5",
-    client: "ArkTechies",
-    title: "March Newsletter",
-    type: "Email",
-    status: "In Review" as const,
-    daysOverdue: 2,
-    workflow: { writer: "Done" as const, editor: "Done" as const, designer: "Done" as const },
-    blocker: undefined
-  },
-]
+const fetcher = (url: string) => fetch(url).then((res) => res.json())
 
 export default function ContentTrackerPage() {
   const [showAddModal, setShowAddModal] = useState(false)
+
+  // Fetch tracker data from API
+  const { data: trackerData, isLoading } = useSWR(
+    `/api/content/tracker`,
+    fetcher,
+    { revalidateOnFocus: false }
+  )
 
   return (
     <div className="w-full max-w-7xl">
@@ -88,7 +44,27 @@ export default function ContentTrackerPage() {
       </div>
 
       {/* Content Tracker Table */}
-      <ContentTrackerTable data={MOCK_CONTENT} />
+      {isLoading ? (
+        <div className="bg-white rounded-lg border border-gray-200 p-12 text-center">
+          <p className="text-gray-600">Loading content tracker...</p>
+        </div>
+      ) : (
+        <ContentTrackerTable data={trackerData?.items || []} />
+      )}
+
+      {/* Add Content Modal */}
+      {showAddModal && (
+        <AddContentModal 
+          onClose={() => setShowAddModal(false)}
+          onSubmit={(data) => {
+            console.log("[v0] Add content:", data)
+            setShowAddModal(false)
+          }}
+        />
+      )}
+    </div>
+  )
+}
 
       {/* Add Content Modal */}
       {showAddModal && (
