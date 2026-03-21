@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import useSWR from "swr"
 import { Copy, Check } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -55,6 +55,10 @@ export function ClientAnalytics() {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedClient, setSelectedClient] = useState<string | null>(null)
   const [selectedSprint, setSelectedSprint] = useState<string | null>(null)
+
+  useEffect(() => {
+    console.log("[v0] Filter state changed:", { selectedClient, selectedSprint, searchTerm })
+  }, [selectedClient, selectedSprint, searchTerm])
 
   // Map sprint IDs to sprint names
   const sprintMap: Record<string, Sprint> = {}
@@ -121,6 +125,8 @@ export function ClientAnalytics() {
       ] as [string, ClientTask[]]
     })
     .filter(([_, clientTasks]) => clientTasks.length > 0)
+
+  console.log("[v0] Filtered groups:", filteredGroups.map(([name]) => name), "Total:", filteredGroups.length)
 
   const handleCopy = (clientName: string, clientTasks: ClientTask[]) => {
     const stats = getClientStats(clientTasks)
