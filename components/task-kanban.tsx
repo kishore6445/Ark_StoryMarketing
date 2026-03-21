@@ -150,17 +150,17 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
     }
   }
 
-  // Simplified 3-state system: Waiting → Working → Done
+  // 4-state workflow: Waiting → Working → Review → Done
   const statusMap: Record<string, string> = {
     "todo": "Waiting",
     "pending": "Waiting",
     "in_progress": "Working",
-    "in_review": "Working",
+    "in_review": "Review",
     "done": "Done",
   }
 
-  // Simplified to 3 columns only
-  const columnStatuses = ["todo", "in_progress", "done"]
+  // Full 4-column workflow
+  const columnStatuses = ["todo", "in_progress", "in_review", "done"]
 
   // Normalize task status for kanban display
   const getNormalizedStatus = (status: string | undefined): string => {
@@ -178,14 +178,14 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
       color: {
         "todo": "border-gray-200",
         "in_progress": "border-blue-200",
-        "in_review": "border-blue-200",
+        "in_review": "border-purple-200",
         "done": "border-green-200",
       }[status],
       bgColor: "bg-white",
       accentColor: {
         "todo": "text-gray-500",
         "in_progress": "text-blue-500",
-        "in_review": "text-blue-500",
+        "in_review": "text-purple-500",
         "done": "text-green-500",
       }[status],
       icon: {
@@ -361,7 +361,12 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
                                 "flex flex-col gap-2"
                               )}
                             >
-                              {/* Task Title Only - Clean and Simple */}
+                              {/* Task Number - Small, muted, easily copyable */}
+                              <div className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                                {task.taskId || task.id.slice(0, 6).toUpperCase()}
+                              </div>
+
+                              {/* Task Title - Primary focus */}
                               <h4 className="text-sm font-semibold text-gray-900 line-clamp-2 leading-snug">
                                 {task.title}
                               </h4>
