@@ -40,6 +40,7 @@ export function ClientAnalytics() {
 
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState("")
+  const [selectedClient, setSelectedClient] = useState<string | null>(null)
 
   const tasks: ClientTask[] = (data?.tasks || [])
     .filter((task: any) => task.promisedDate)
@@ -83,13 +84,15 @@ export function ClientAnalytics() {
     }
   }
 
-  const filteredGroups = Object.entries(groupedByClient).filter(([_, clientTasks]) =>
-    clientTasks.some(
-      (task) =>
-        task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        task.taskId.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredGroups = Object.entries(groupedByClient)
+    .filter(([clientName]) => !selectedClient || clientName === selectedClient)
+    .filter(([_, clientTasks]) =>
+      clientTasks.some(
+        (task) =>
+          task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          task.taskId.toLowerCase().includes(searchTerm.toLowerCase())
+      )
     )
-  )
 
   const handleCopy = (clientName: string, clientTasks: ClientTask[]) => {
     const stats = getClientStats(clientTasks)
@@ -137,6 +140,40 @@ ${taskList}`
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Client Analytics</h2>
           <p className="text-sm text-gray-600 mt-1">Tasks and sprint/week statistics by client</p>
+        </div>
+        
+        {/* Client Filter Pills */}
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-gray-600 uppercase tracking-wider">Filter by Client</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setSelectedClient(null)}
+              className={cn(
+                "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                selectedClient === null
+                  ? "bg-blue-600 text-white shadow-sm"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+              )}
+            >
+              All Clients ({Object.keys(groupedByClient).length})
+            </button>
+            {Object.keys(groupedByClient)
+              .sort()
+              .map((clientName) => (
+                <button
+                  key={clientName}
+                  onClick={() => setSelectedClient(clientName)}
+                  className={cn(
+                    "px-4 py-2 rounded-full text-sm font-medium transition-all",
+                    selectedClient === clientName
+                      ? "bg-blue-600 text-white shadow-sm"
+                      : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                  )}
+                >
+                  {clientName} ({groupedByClient[clientName].length})
+                </button>
+              ))}
+          </div>
         </div>
         
         <input
