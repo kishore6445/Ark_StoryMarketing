@@ -200,14 +200,18 @@ export default function ContentVisibilityPage() {
       )}
 
       {activeTab === "calendar" && (
-        <ContentCalendarView 
-          clientId={selectedClient === "All Clients" ? null : selectedClient}
-          onCreatePost={() => setShowAddModal(true)}
-        />
+        <div key="calendar-tab">
+          <ContentCalendarView 
+            clientId={selectedClient === "All Clients" ? null : selectedClient}
+            onCreatePost={() => setShowAddModal(true)}
+          />
+        </div>
       )}
 
       {activeTab === "tracker" && (
-        <ContentTrackerTable data={MOCK_CONTENT} />
+        <div key="tracker-tab">
+          <ContentTrackerTable data={MOCK_CONTENT} />
+        </div>
       )}
 
       {/* Add Content Modal */}
