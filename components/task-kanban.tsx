@@ -326,7 +326,9 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
                               draggable
                               onDragStart={() => handleDragStart(task, column.id)}
                               onClick={() => {
-                                if (task.type !== "task") return
+                                if (task.type !== "task") {
+                                  return
+                                }
                                 router.push(`/tasks/${task.id}`)
                               }}
                               style={{
@@ -448,7 +450,9 @@ export function TaskKanban({ tasks, onTaskStatusChange, isLoading, onTaskUpdate,
                     draggable
                     onDragStart={() => handleDragStart(task, "done")}
                     onClick={() => {
-                      if (task.type !== "task") return
+                      if (task.type !== "task") {
+                        return
+                      }
                       router.push(`/tasks/${task.id}`)
                     }}
                     className="group p-3 rounded-lg border border-green-100 bg-green-50 hover:border-green-200 hover:shadow-sm transition-all cursor-move active:scale-95"
