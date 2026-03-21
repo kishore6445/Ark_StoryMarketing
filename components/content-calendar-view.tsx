@@ -28,8 +28,11 @@ const CLIENT_COLORS = {
   "ArkTechies": "bg-amber-100 text-amber-700 border-l-4 border-amber-400",
 }
 
+const ALL_CLIENTS = ["All Clients", "Telugu Pizza", "Smart Snaxx", "Visa Nagendar", "Story Marketing", "ArkTechies"]
+
 export function ContentCalendarView({ clientId, onCreatePost }: ContentCalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(new Date(2026, 2)) // March 2026
+  const [selectedClient, setSelectedClient] = useState("All Clients")
 
   const getDaysInMonth = (date: Date) => {
     const year = date.getFullYear()
@@ -52,22 +55,50 @@ export function ContentCalendarView({ clientId, onCreatePost }: ContentCalendarV
 
   const getPostsForDate = (day: number) => {
     const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`
-    return MOCK_CALENDAR_POSTS.filter(p => p.date === dateStr)
+    let posts = MOCK_CALENDAR_POSTS.filter(p => p.date === dateStr)
+    
+    // Filter by selected client if not "All Clients"
+    if (selectedClient !== "All Clients") {
+      posts = posts.filter(p => p.client === selectedClient)
+    }
+    
+    return posts
   }
 
-  // Calculate total posts and balance
-  const totalPosts = MOCK_CALENDAR_POSTS.length
-  const daysWithPosts = new Set(MOCK_CALENDAR_POSTS.map(p => p.date)).size
+  // Calculate total posts and balance (filtered)
+  const filteredPosts = selectedClient === "All Clients" 
+    ? MOCK_CALENDAR_POSTS 
+    : MOCK_CALENDAR_POSTS.filter(p => p.client === selectedClient)
+  
+  const totalPosts = filteredPosts.length
+  const daysWithPosts = new Set(filteredPosts.map(p => p.date)).size
   const avgPostsPerDay = daysWithPosts > 0 ? (totalPosts / daysWithPosts).toFixed(1) : 0
 
   return (
     <div className="space-y-6">
-      {/* Header with balance indicator */}
+      {/* Header with month, client filter, and navigation */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">{monthName}</h2>
-          <p className="text-sm text-gray-600 mt-1">{totalPosts} posts scheduled across {daysWithPosts} days</p>
+        <div className="flex items-center gap-4">
+          <div>
+            <h2 className="text-lg font-semibold text-gray-900">{monthName}</h2>
+            <p className="text-sm text-gray-600 mt-1">{totalPosts} posts scheduled across {daysWithPosts} days</p>
+          </div>
+          
+          {/* Client Filter Dropdown */}
+          <div className="pl-4 border-l border-gray-200">
+            <label className="block text-xs font-semibold text-gray-600 uppercase mb-2">Filter by Client</label>
+            <select 
+              value={selectedClient}
+              onChange={(e) => setSelectedClient(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-900 bg-white hover:border-gray-400 transition-colors"
+            >
+              {ALL_CLIENTS.map((client) => (
+                <option key={client} value={client}>{client}</option>
+              ))}
+            </select>
+          </div>
         </div>
+        
         <div className="flex items-center gap-2">
           <button onClick={previousMonth} className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
             <ChevronLeft className="w-5 h-5 text-gray-600" />
