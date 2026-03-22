@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import useSWR from "swr"
-import { PlayCircle, CheckCircle2, Clock } from "lucide-react"
+import { PlayCircle, CheckCircle2, Clock, Plus, ChevronDown } from "lucide-react"
 import { SprintCloseModal } from "./sprint-close-modal"
 import { cn } from "@/lib/utils"
 
@@ -11,6 +11,15 @@ interface SprintTask {
   task_id: string
   title: string
   status: "todo" | "in_progress" | "in_review" | "done"
+}
+
+interface BacklogTask {
+  id: string
+  task_id: string
+  title: string
+  status: string
+  promised_date: string
+  client_id: string
 }
 
 interface Sprint {
@@ -38,12 +47,21 @@ export function SprintManagementDashboard() {
     revalidateOnFocus: false,
     dedupingInterval: 30000,
   })
+  const { data: backlogData, mutate: mutateBacklog } = useSWR("/api/backlog", fetcher, {
+    revalidateOnFocus: false,
+    dedupingInterval: 30000,
+  })
 
   const [selectedClient, setSelectedClient] = useState<string>("")
   const [closeModalOpen, setCloseModalOpen] = useState(false)
   const [selectedSprint, setSelectedSprint] = useState<Sprint | null>(null)
+  const [assigningTask, setAssigningTask] = useState<BacklogTask | null>(null)
+  const [assignToSprint, setAssignToSprint] = useState<string>("")
+  const [createNewSprint, setCreateNewSprint] = useState(false)
+  const [newSprintName, setNewSprintName] = useState("")
 
   const sprints: Sprint[] = sprintsData?.sprints || []
+  const backlogTasks: BacklogTask[] = backlogData?.tasks || []
 
   // Get unique clients
   const uniqueClients = Array.from(
@@ -55,10 +73,13 @@ export function SprintManagementDashboard() {
     ).entries()
   )
 
-  // Filter sprints
-  const filteredSprints = selectedClient
-    ? sprints.filter((s) => s.client_id === selectedClient)
-    : sprints
+  // Filter backlog by client
+  const filteredBacklog = selectedClient
+    ? backlogTasks.filter((t) => t.client_id === selectedClient)
+    : backlogTasks
+
+  // Sprints available for assignment (exclude completed)
+  const availableSprints = filteredSprints.filter((s) => s.status !== "completed")
 
   // Group by status
   const activeSprints = filteredSprints.filter((s) => s.status === "active")
@@ -66,9 +87,70 @@ export function SprintManagementDashboard() {
   const completedSprints = filteredSprints.filter((s) => s.status === "completed")
 
   const handleCloseSprint = (sprint: Sprint) => {
-    console.log("[v0] Opening close sprint modal for:", sprint.name)
     setSelectedSprint(sprint)
     setCloseModalOpen(true)
+  }
+
+  const handleAssignTask = async () => {
+    if (!assigningTask) return
+    if (!assignToSprint && !newSprintName) {
+      alert("Please select a sprint or enter a name for a new sprint")
+      return
+    }
+
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("sessionToken") : null
+      
+      let sprintId = assignToSprint
+
+      // Create new sprint if needed
+      if (createNewSprint && newSprintName) {
+        const createResponse = await fetch("/api/sprints", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            name: newSprintName,
+            client_id: assigningTask.client_id,
+            status: "planning",
+            start_date: new Date().toISOString().split("T")[0],
+            end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+          }),
+        })
+
+        if (createResponse.ok) {
+          const newSprint = await createResponse.json()
+          sprintId = newSprint.id
+        }
+      }
+
+      // Assign task to sprint
+      const assignResponse = await fetch("/api/tasks/assign", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          taskId: assigningTask.id,
+          sprintId: sprintId,
+        }),
+      })
+
+      if (assignResponse.ok) {
+        mutate()
+        mutateBacklog()
+        setAssigningTask(null)
+        setAssignToSprint("")
+        setNewSprintName("")
+        setCreateNewSprint(false)
+      }
+    } catch (error) {
+      console.error("[v0] Error assigning task:", error)
+      alert("Failed to assign task")
+    }
   }
 
   const getTaskStats = (sprint: Sprint) => {
@@ -266,6 +348,130 @@ export function SprintManagementDashboard() {
           {completedSprints.map((sprint) => (
             <SprintCard key={sprint.id} sprint={sprint} />
           ))}
+        </div>
+      )}
+
+      {/* Backlog Section */}
+      <div className="border-t pt-8">
+        <h2 className="text-xl font-bold text-gray-900 mb-4">Backlog ({filteredBacklog.length})</h2>
+        
+        {filteredBacklog.length === 0 ? (
+          <div className="bg-gray-50 rounded-lg border border-gray-200 p-8 text-center">
+            <p className="text-gray-600">No items in backlog</p>
+          </div>
+        ) : (
+          <div className="bg-white border border-gray-200 rounded-lg overflow-hidden">
+            <div className="space-y-0">
+              {filteredBacklog.map((task) => (
+                <div
+                  key={task.id}
+                  className="flex items-center justify-between gap-4 p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex-1 min-w-0">
+                    <span className="text-xs font-mono text-gray-500">{task.task_id}</span>
+                    <p className="font-medium text-gray-900">{task.title}</p>
+                    <p className="text-sm text-gray-600">Due: {task.promised_date}</p>
+                  </div>
+                  <button
+                    onClick={() => setAssigningTask(task)}
+                    className="flex items-center gap-2 px-3 py-2 bg-blue-600 text-white hover:bg-blue-700 rounded font-medium text-sm whitespace-nowrap transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Assign to Sprint
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Assign Task Modal */}
+      {assigningTask && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Assign Task to Sprint</h3>
+              <p className="text-sm text-gray-600 mt-1">{assigningTask.task_id}: {assigningTask.title}</p>
+            </div>
+
+            <div className="p-6 space-y-4">
+              {/* Existing Sprints */}
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Select Existing Sprint
+                </label>
+                <select
+                  value={assignToSprint}
+                  onChange={(e) => {
+                    setAssignToSprint(e.target.value)
+                    setCreateNewSprint(false)
+                    setNewSprintName("")
+                  }}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Choose a sprint...</option>
+                  {availableSprints.map((sprint) => (
+                    <option key={sprint.id} value={sprint.id}>
+                      {sprint.name} ({sprint.status})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Or Create New */}
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300"></div>
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">or</span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  <input
+                    type="checkbox"
+                    checked={createNewSprint}
+                    onChange={(e) => setCreateNewSprint(e.target.checked)}
+                    className="mr-2"
+                  />
+                  Create New Sprint
+                </label>
+                {createNewSprint && (
+                  <input
+                    type="text"
+                    value={newSprintName}
+                    onChange={(e) => setNewSprintName(e.target.value)}
+                    placeholder="Sprint name (e.g., Mar 25-31)"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex gap-3">
+              <button
+                onClick={() => {
+                  setAssigningTask(null)
+                  setAssignToSprint("")
+                  setNewSprintName("")
+                  setCreateNewSprint(false)
+                }}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAssignTask}
+                disabled={!assignToSprint && !newSprintName}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors"
+              >
+                Assign
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
