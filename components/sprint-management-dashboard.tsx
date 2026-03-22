@@ -73,6 +73,11 @@ export function SprintManagementDashboard() {
     ).entries()
   )
 
+  // Filter sprints by client
+  const filteredSprints = selectedClient
+    ? sprints.filter((s) => s.client_id === selectedClient)
+    : sprints
+
   // Filter backlog by client
   const filteredBacklog = selectedClient
     ? backlogTasks.filter((t) => t.client_id === selectedClient)
