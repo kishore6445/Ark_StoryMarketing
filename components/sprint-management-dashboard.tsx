@@ -65,6 +65,7 @@ export function SprintManagementDashboard() {
   const completedSprints = filteredSprints.filter((s) => s.status === "completed")
 
   const handleCloseSprint = (sprint: Sprint) => {
+    console.log("[v0] Opening close sprint modal for:", sprint.name)
     setSelectedSprint(sprint)
     setCloseModalOpen(true)
   }
@@ -424,27 +425,29 @@ export function SprintManagementDashboard() {
       )}
 
       {/* Close Sprint Modal */}
-      {selectedSprint && (
-        <SprintCloseModal
-          isOpen={closeModalOpen}
-          onClose={() => {
-            setCloseModalOpen(false)
-            setSelectedSprint(null)
-          }}
-          sprint={selectedSprint}
-          tasks={
-            selectedSprint.tasks?.map((t) => ({
-              id: t.id,
-              title: t.title,
-              status: t.status as "todo" | "in-progress" | "in-review" | "done",
-            })) || []
-          }
-          sprints={sprints.map((s) => ({ id: s.id, name: s.name }))}
-          onSprintClosed={() => {
-            mutate()
-          }}
-        />
-      )}
+      <SprintCloseModal
+        isOpen={closeModalOpen && !!selectedSprint}
+        onClose={() => {
+          console.log("[v0] Closing sprint modal")
+          setCloseModalOpen(false)
+          setSelectedSprint(null)
+        }}
+        sprint={selectedSprint}
+        tasks={
+          selectedSprint?.tasks?.map((t) => ({
+            id: t.id,
+            title: t.title,
+            status: t.status as "todo" | "in-progress" | "in-review" | "done",
+          })) || []
+        }
+        sprints={sprints.map((s) => ({ id: s.id, name: s.name }))}
+        onSprintClosed={() => {
+          console.log("[v0] Sprint closed successfully, refreshing data")
+          setCloseModalOpen(false)
+          setSelectedSprint(null)
+          mutate()
+        }}
+      />
     </div>
   )
 }
