@@ -367,22 +367,6 @@ export function SprintManagementDashboard() {
           Create Sprint
         </button>
       </div>
-            setSelectedClient(e.target.value)
-            setCloseModalOpen(false)
-          }}
-          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="">All Clients ({sprints.length} sprints)</option>
-          {uniqueClients.map(([clientId, clientName]) => {
-            const count = sprints.filter((s) => s.client_id === clientId).length
-            return (
-              <option key={clientId} value={clientId}>
-                {clientName} ({count})
-              </option>
-            )
-          })}
-        </select>
-      </div>
 
       {/* Empty State */}
       {!isLoading && filteredSprints.length === 0 && (
