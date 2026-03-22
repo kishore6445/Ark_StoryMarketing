@@ -347,6 +347,9 @@ export function Sidebar({ currentPhase, onPhaseChange }: SidebarProps) {
                     router.push("/pkr-analytics")
                   } else if (item.id === "team-analytics") {
                     router.push("/team-analytics")
+                  } else if (item.id === "sprint-management") {
+                    router.push("/sprint-management")
+                    onPhaseChange("sprint-management")
                   } else if (item.id === "client-analytics") {
                     router.push("/")
                     onPhaseChange("client-analytics")
