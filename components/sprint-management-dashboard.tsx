@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import useSWR from "swr"
-import { PlayCircle, CheckCircle2, Clock, Plus, ChevronDown } from "lucide-react"
+import { PlayCircle, CheckCircle2, Clock, Plus, ChevronDown, X } from "lucide-react"
 import { SprintCloseModal } from "./sprint-close-modal"
 import { cn } from "@/lib/utils"
 
@@ -59,6 +59,13 @@ export function SprintManagementDashboard() {
   const [assignToSprint, setAssignToSprint] = useState<string>("")
   const [createNewSprint, setCreateNewSprint] = useState(false)
   const [newSprintName, setNewSprintName] = useState("")
+  const [createSprintModalOpen, setCreateSprintModalOpen] = useState(false)
+  const [sprintFormData, setSprintFormData] = useState({
+    name: "",
+    startDate: new Date().toISOString().split("T")[0],
+    endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+  })
+  const [isCreatingSprint, setIsCreatingSprint] = useState(false)
 
   const sprints: Sprint[] = sprintsData?.sprints || []
   const backlogTasks: BacklogTask[] = backlogData?.tasks || []
@@ -96,7 +103,45 @@ export function SprintManagementDashboard() {
     setCloseModalOpen(true)
   }
 
-  const handleAssignTask = async () => {
+  const handleCreateSprintSubmit = async () => {
+    if (!sprintFormData.name.trim() || !selectedClient) {
+      alert("Please select a client and enter sprint name")
+      return
+    }
+
+    setIsCreatingSprint(true)
+    try {
+      const token = localStorage.getItem("sessionToken")
+      const response = await fetch("/api/sprints", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: sprintFormData.name,
+          client_id: selectedClient,
+          start_date: sprintFormData.startDate,
+          end_date: sprintFormData.endDate,
+          status: "planning",
+        }),
+      })
+
+      if (response.ok) {
+        mutate()
+        setCreateSprintModalOpen(false)
+        setSprintFormData({
+          name: "",
+          startDate: new Date().toISOString().split("T")[0],
+          endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split("T")[0],
+        })
+      }
+    } catch (error) {
+      console.error("[v0] Error creating sprint:", error)
+    } finally {
+      setIsCreatingSprint(false)
+    }
+  }
     if (!assigningTask) return
     if (!assignToSprint && !newSprintName) {
       alert("Please select a sprint or enter a name for a new sprint")
@@ -294,7 +339,7 @@ export function SprintManagementDashboard() {
         </p>
       </div>
 
-      {/* Client Dropdown */}
+      {/* Client Dropdown & Create Sprint Button */}
       <div className="flex items-center gap-4 bg-white border border-gray-200 rounded-lg p-4">
         <label className="text-sm font-semibold text-gray-700 whitespace-nowrap">
           Select Client:
@@ -302,6 +347,26 @@ export function SprintManagementDashboard() {
         <select
           value={selectedClient}
           onChange={(e) => {
+            setSelectedClient(e.target.value)
+          }}
+          className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="">All Clients</option>
+          {uniqueClients.map(([clientId, clientName]) => (
+            <option key={clientId} value={clientId}>
+              {clientName}
+            </option>
+          ))}
+        </select>
+        <button
+          onClick={() => setCreateSprintModalOpen(true)}
+          disabled={!selectedClient}
+          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg font-medium transition-colors"
+        >
+          <Plus className="w-4 h-4" />
+          Create Sprint
+        </button>
+      </div>
             setSelectedClient(e.target.value)
             setCloseModalOpen(false)
           }}
@@ -504,6 +569,91 @@ export function SprintManagementDashboard() {
           mutate()
         }}
       />
+
+      {/* Create Sprint Modal */}
+      {createSprintModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+            <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Create New Sprint</h3>
+              <button
+                onClick={() => setCreateSprintModalOpen(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Sprint Name
+                </label>
+                <input
+                  type="text"
+                  value={sprintFormData.name}
+                  onChange={(e) =>
+                    setSprintFormData({ ...sprintFormData, name: e.target.value })
+                  }
+                  placeholder="e.g., Mar 25 - Apr 1"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Start Date
+                </label>
+                <input
+                  type="date"
+                  value={sprintFormData.startDate}
+                  onChange={(e) =>
+                    setSprintFormData({ ...sprintFormData, startDate: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  End Date
+                </label>
+                <input
+                  type="date"
+                  value={sprintFormData.endDate}
+                  onChange={(e) =>
+                    setSprintFormData({ ...sprintFormData, endDate: e.target.value })
+                  }
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-gray-200 flex gap-3">
+              <button
+                onClick={() => setCreateSprintModalOpen(false)}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCreateSprintSubmit}
+                disabled={isCreatingSprint}
+                className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+              >
+                {isCreatingSprint ? (
+                  <>
+                    <span className="inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  "Create Sprint"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
