@@ -31,7 +31,7 @@ export function SprintCloseModal({
   sprints,
   onSprintClosed,
 }: SprintCloseModalProps) {
-  const [selectedDestination, setSelectedDestination] = useState<"new-sprint" | "backlog">("new-sprint")
+  const [selectedDestination, setSelectedDestination] = useState<"new-sprint" | "backlog">("backlog")
   const [isClosing, setIsClosing] = useState(false)
   const [newSprintName, setNewSprintName] = useState("")
   const [error, setError] = useState<string | null>(null)
@@ -47,7 +47,11 @@ export function SprintCloseModal({
   const totalNeedsMigration = tasksByStatus.inProgress.length + tasksByStatus.inReview.length
 
   const handleCloseSprint = async () => {
-    if (!sprint) return
+    console.log("[v0] Close sprint clicked - selectedDestination:", selectedDestination)
+    if (!sprint) {
+      console.error("[v0] No sprint selected")
+      return
+    }
     if (selectedDestination === "new-sprint" && !newSprintName.trim()) {
       setError("Please enter a name for the new sprint")
       return
@@ -57,6 +61,7 @@ export function SprintCloseModal({
     setIsClosing(true)
     try {
       const token = localStorage.getItem("sessionToken")
+      console.log("[v0] Calling /api/sprints/close with destination:", selectedDestination)
       const response = await fetch("/api/sprints/close", {
         method: "POST",
         headers: {
@@ -74,11 +79,14 @@ export function SprintCloseModal({
         }),
       })
 
+      console.log("[v0] API response status:", response.status)
       if (response.ok) {
+        console.log("[v0] Sprint closed successfully")
         onSprintClosed()
         onClose()
       } else {
         const data = await response.json()
+        console.error("[v0] API error:", data)
         setError(data.error || "Failed to close sprint")
       }
     } catch (error) {
@@ -256,7 +264,7 @@ export function SprintCloseModal({
           </button>
           <button
             onClick={handleCloseSprint}
-            disabled={isClosing || (selectedDestination === "new-sprint" && !newSprintName.trim())}
+            disabled={isClosing || (totalNeedsMigration > 0 && selectedDestination === "new-sprint" && !newSprintName.trim())}
             className="flex-1 px-4 py-2 bg-[#007AFF] text-white rounded-lg font-medium hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
           >
             {isClosing ? (
