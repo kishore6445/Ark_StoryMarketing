@@ -68,10 +68,19 @@ export async function POST(request: NextRequest) {
 
     // Migrate pending tasks
     if (tasksToMigrate.length > 0) {
-      await supabase
-        .from("tasks")
-        .update({ sprint_id: destinationSprintId })
-        .in("id", tasksToMigrate)
+      if (destination === "backlog") {
+        // Move to backlog (set sprint_id to null)
+        await supabase
+          .from("tasks")
+          .update({ sprint_id: null, status: "todo" })
+          .in("id", tasksToMigrate)
+      } else {
+        // Move to new sprint
+        await supabase
+          .from("tasks")
+          .update({ sprint_id: destinationSprintId })
+          .in("id", tasksToMigrate)
+      }
     }
 
     // Mark sprint as completed
