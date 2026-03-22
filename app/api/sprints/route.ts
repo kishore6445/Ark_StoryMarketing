@@ -19,7 +19,6 @@ export async function GET(request: NextRequest) {
 
     let query = supabase
       .from('sprints')
-      // .select('*')
       .select(`
         *,
         client_id,
@@ -40,7 +39,30 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
-    return NextResponse.json({ sprints: sprints || [] })
+    // Fetch tasks for each sprint
+    const sprintsWithTasks = await Promise.all(
+      (sprints || []).map(async (sprint) => {
+        const { data: tasks } = await supabase
+          .from('tasks')
+          .select(`
+            id,
+            task_id,
+            title,
+            status,
+            promised_date,
+            promised_time
+          `)
+          .eq('sprint_id', sprint.id)
+          .order('created_at', { ascending: false })
+
+        return {
+          ...sprint,
+          tasks: tasks || [],
+        }
+      })
+    )
+
+    return NextResponse.json({ sprints: sprintsWithTasks || [] })
   } catch (error: any) {
     console.error("[v0] Error in sprints GET:", error)
     return NextResponse.json({ error: error.message }, { status: 500 })
