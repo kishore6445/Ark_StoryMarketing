@@ -47,9 +47,27 @@ export function SprintCloseModal({
   const totalNeedsMigration = tasksByStatus.inProgress.length + tasksByStatus.inReview.length
 
   const handleCloseSprint = async () => {
-    console.log("[v0] Close sprint clicked - selectedDestination:", selectedDestination)
+    console.log("[v0] ════════════════════════════════════════════════")
+    console.log("[v0] SPRINT CLOSE WORKFLOW STARTED")
+    console.log("[v0] ════════════════════════════════════════════════")
+    console.log("[v0] Sprint Details:")
+    console.log("[v0]   - Sprint ID: ", sprint?.id)
+    console.log("[v0]   - Sprint Name: ", sprint?.name)
+    console.log("[v0]")
+    console.log("[v0] Task Summary:")
+    console.log("[v0]   - Done tasks (to ARCHIVE): ", tasksByStatus.done.length)
+    console.log("[v0]   - In Progress tasks (to MIGRATE): ", tasksByStatus.inProgress.length)
+    console.log("[v0]   - In Review tasks (to MIGRATE): ", tasksByStatus.inReview.length)
+    console.log("[v0]   - Total tasks to migrate: ", totalNeedsMigration)
+    console.log("[v0]")
+    console.log("[v0] User Selection:")
+    console.log("[v0]   - Destination: ", selectedDestination)
+    if (selectedDestination === "new-sprint") {
+      console.log("[v0]   - New Sprint Name: ", newSprintName)
+    }
+
     if (!sprint) {
-      console.error("[v0] No sprint selected")
+      console.error("[v0] ERROR: No sprint selected")
       return
     }
     if (selectedDestination === "new-sprint" && !newSprintName.trim()) {
@@ -61,36 +79,60 @@ export function SprintCloseModal({
     setIsClosing(true)
     try {
       const token = localStorage.getItem("sessionToken")
-      console.log("[v0] Calling /api/sprints/close with destination:", selectedDestination)
+      const payload = {
+        sprintId: sprint.id,
+        destination: selectedDestination,
+        newSprintName: selectedDestination === "new-sprint" ? newSprintName : null,
+        tasksToMigrate: [
+          ...tasksByStatus.inProgress.map((t) => t.id),
+          ...tasksByStatus.inReview.map((t) => t.id),
+        ],
+      }
+      
+      console.log("[v0]")
+      console.log("[v0] SENDING REQUEST to /api/sprints/close")
+      console.log("[v0] Payload:", payload)
+      
       const response = await fetch("/api/sprints/close", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({
-          sprintId: sprint.id,
-          destination: selectedDestination,
-          newSprintName: selectedDestination === "new-sprint" ? newSprintName : null,
-          tasksToMigrate: [
-            ...tasksByStatus.inProgress.map((t) => t.id),
-            ...tasksByStatus.inReview.map((t) => t.id),
-          ],
-        }),
+        body: JSON.stringify(payload),
       })
 
-      console.log("[v0] API response status:", response.status)
+      console.log("[v0]")
+      console.log("[v0] API RESPONSE RECEIVED")
+      console.log("[v0] Status Code: ", response.status)
+      
       if (response.ok) {
-        console.log("[v0] Sprint closed successfully")
+        const data = await response.json()
+        console.log("[v0] Response Data: ", data)
+        console.log("[v0]")
+        console.log("[v0] ✅ WORKFLOW SUCCESSFUL")
+        console.log("[v0] Sprint Status: 'completed'")
+        console.log("[v0] Done tasks: ARCHIVED with timestamp")
+        if (selectedDestination === "backlog") {
+          console.log("[v0] Pending tasks: MOVED TO BACKLOG (sprint_id = null)")
+        } else {
+          console.log("[v0] Pending tasks: MOVED TO NEW SPRINT")
+          console.log("[v0] New Sprint ID: ", data.newSprintId)
+        }
+        console.log("[v0] ════════════════════════════════════════════════")
         onSprintClosed()
         onClose()
       } else {
         const data = await response.json()
-        console.error("[v0] API error:", data)
+        console.error("[v0] ❌ API ERROR")
+        console.error("[v0] Error Response: ", data)
+        console.log("[v0] ════════════════════════════════════════════════")
         setError(data.error || "Failed to close sprint")
       }
     } catch (error) {
-      console.error("[v0] Error closing sprint:", error)
+      console.error("[v0] ❌ NETWORK ERROR")
+      console.error("[v0] Error: ", error)
+      console.log("[v0] ════════════════════════════════════════════════")
       setError("Error closing sprint. Please try again.")
     } finally {
       setIsClosing(false)
