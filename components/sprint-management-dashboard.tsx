@@ -210,14 +210,6 @@ export function SprintManagementDashboard() {
     return { completed, total, pending: total - completed }
   }
 
-  if (isLoading) {
-    return (
-      <div className="p-8">
-        <p className="text-gray-600">Loading sprints...</p>
-      </div>
-    )
-  }
-
   const SprintCard = ({ sprint }: { sprint: Sprint }) => {
     const { completed, total, pending } = getTaskStats(sprint)
     const progress = total > 0 ? Math.round((completed / total) * 100) : 0
@@ -325,6 +317,14 @@ export function SprintManagementDashboard() {
             <p className="text-sm text-gray-600">No tasks in this sprint</p>
           </div>
         )}
+      </div>
+    )
+  }
+
+  if (isLoading) {
+    return (
+      <div className="p-8">
+        <p className="text-gray-600">Loading sprints...</p>
       </div>
     )
   }
