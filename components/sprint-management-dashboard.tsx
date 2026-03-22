@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import useSWR from "swr"
-import { ChevronDown, X } from "lucide-react"
+import { ChevronDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 interface Sprint {
@@ -12,14 +12,8 @@ interface Sprint {
   start_date: string
   end_date: string
   client_id?: string
-  clientName?: string
   taskCount?: number
   completedCount?: number
-}
-
-interface Client {
-  id: string
-  name: string
 }
 
 const fetcher = (url: string) => {
@@ -30,17 +24,21 @@ const fetcher = (url: string) => {
 }
 
 export function SprintManagementDashboard() {
-  const { data: sprintsData, isLoading: sprintsLoading } = useSWR(
+  const { data: sprintsData, isLoading } = useSWR(
     "/api/individual-sprints",
-    fetcher
+    fetcher,
+    { revalidateOnFocus: false, dedupingInterval: 30000 }
   )
-  const { data: clientsData } = useSWR("/api/clients", fetcher)
   
   const [selectedClient, setSelectedClient] = useState<string>("")
 
   const sprints: Sprint[] = sprintsData?.sprints || []
-  const clients: Client[] = clientsData?.clients || []
   
+  // Get unique clients from sprints
+  const uniqueClients = Array.from(
+    new Set(sprints.map((s) => s.client_id).filter(Boolean))
+  )
+
   // Group sprints by client
   const sprintsByClient = sprints.reduce(
     (acc: Record<string, Sprint[]>, sprint) => {
@@ -58,11 +56,6 @@ export function SprintManagementDashboard() {
     ? sprintsByClient[selectedClient] || []
     : sprints
 
-  const getClientName = (clientId: string) => {
-    const client = clients.find((c) => c.id === clientId)
-    return client?.name || clientId.substring(0, 8)
-  }
-
   const getStatusColor = (status: string) => {
     switch (status) {
       case "active":
@@ -74,14 +67,6 @@ export function SprintManagementDashboard() {
       default:
         return "bg-gray-100 text-gray-700"
     }
-  }
-
-  if (sprintsLoading) {
-    return (
-      <div className="p-8">
-        <p className="text-gray-600">Loading sprints...</p>
-      </div>
-    )
   }
 
   return (
@@ -96,32 +81,44 @@ export function SprintManagementDashboard() {
 
       {/* Client Dropdown */}
       <div className="flex items-center gap-4 bg-white border border-gray-200 rounded-lg p-4">
-        <label className="text-sm font-semibold text-gray-700">Select Client:</label>
+        <label className="text-sm font-semibold text-gray-700 whitespace-nowrap">
+          Select Client:
+        </label>
         <select
           value={selectedClient}
           onChange={(e) => setSelectedClient(e.target.value)}
           className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="">All Clients ({sprints.length})</option>
-          {clients.map((client) => {
-            const count = sprintsByClient[client.id]?.length || 0
+          {uniqueClients.map((clientId) => {
+            const count = sprintsByClient[clientId]?.length || 0
             return (
-              <option key={client.id} value={client.id}>
-                {client.name} ({count})
+              <option key={clientId} value={clientId}>
+                Client {clientId?.substring(0, 8) || "Unknown"} ({count})
               </option>
             )
           })}
         </select>
       </div>
 
+      {/* Loading State */}
+      {isLoading && (
+        <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+          <p className="text-gray-600">Loading sprints...</p>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!isLoading && filteredSprints.length === 0 && (
+        <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+          <p className="text-gray-600">No sprints found</p>
+        </div>
+      )}
+
       {/* Sprints Grid */}
-      <div className="space-y-4">
-        {filteredSprints.length === 0 ? (
-          <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-            <p className="text-gray-600">No sprints found</p>
-          </div>
-        ) : (
-          filteredSprints.map((sprint) => (
+      {!isLoading && filteredSprints.length > 0 && (
+        <div className="space-y-4">
+          {filteredSprints.map((sprint) => (
             <div
               key={sprint.id}
               className="bg-white border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow"
@@ -185,9 +182,9 @@ export function SprintManagementDashboard() {
                 </div>
               </div>
             </div>
-          ))
-        )}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
